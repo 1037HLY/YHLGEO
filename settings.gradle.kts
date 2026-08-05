@@ -4,13 +4,7 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
-    plugins {
-        // 明确声明Android和Kotlin插件的版本
-        id("com.android.application") version "8.2.0"
-        id("org.jetbrains.kotlin.android") version "1.9.20"
-        id("kotlin-kapt") version "1.9.20"
-        id("kotlin-parcelize") version "1.9.20"
-    }
+    // 移除 plugins 块，不再这里声明
 }
 
 dependencyResolutionManagement {

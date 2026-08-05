@@ -4,13 +4,18 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+    plugins {
+        // 明确声明Android和Kotlin插件的版本
+        id("com.android.application") version "8.2.0"
+        id("org.jetbrains.kotlin.android") version "1.9.20"
+        id("kotlin-kapt") version "1.9.20"
+        id("kotlin-parcelize") version "1.9.20"
+    }
 }
 
 dependencyResolutionManagement {
-    // 将此模式改为 'PREFER_PROJECT'，允许项目中的仓库配置覆盖设置
-    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // 这里可以保留，但主要仓库在 allprojects 中定义
         google()
         mavenCentral()
     }

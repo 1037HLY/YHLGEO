@@ -1,15 +1,4 @@
-// Top-level build file
-plugins {
-    // 这里不需要再添加 classpath，由 settings.gradle.kts 管理
-}
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
+// 根目录构建脚本，所有插件已在settings.gradle.kts中管理
 tasks.register("clean", Delete::class) {
     delete(rootProject.buildDir)
 }

@@ -21,20 +21,15 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: 8.2
+    - name: Download Gradle Wrapper JAR
+      run: |
+        mkdir -p gradle/wrapper
+        curl -L https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+        echo "✅ gradle-wrapper.jar downloaded"
 
     - name: Fix gradlew permissions
       run: |
-        if [ -f gradlew ]; then
-          chmod +x gradlew
-          echo "✅ gradlew permission fixed"
-        else
-          echo "❌ gradlew not found!"
-          exit 1
-        fi
+        chmod +x gradlew
         ls -la gradlew
 
     - name: Build APK

@@ -26,9 +26,11 @@ import com.geosurvey.toolbox.data.database.TrackPointEntity
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
 import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
+import com.geosurvey.toolbox.presentation.ui.screens.AnalysisScreen
 import com.geosurvey.toolbox.presentation.ui.screens.AttitudeScreen
 import com.geosurvey.toolbox.presentation.ui.screens.MapScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
+import com.geosurvey.toolbox.presentation.viewmodel.AnalysisViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.AttitudeViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingViewModel
@@ -100,6 +102,7 @@ class MainActivity : ComponentActivity() {
                     var showTrackList by remember { mutableStateOf(false) }
                     var showMap by remember { mutableStateOf(false) }
                     var showAttitude by remember { mutableStateOf(false) }
+                    var showAnalysis by remember { mutableStateOf(false) }
 
                     LaunchedEffect(hasPermission) {
                         if (hasPermission) {
@@ -121,7 +124,13 @@ class MainActivity : ComponentActivity() {
                     val trackingState by trackingViewModel.uiState.collectAsState()
 
                     // 页面切换
-                    if (showAttitude) {
+                    if (showAnalysis) {
+                        val analysisViewModel: AnalysisViewModel = viewModel()
+                        AnalysisScreen(
+                            viewModel = analysisViewModel,
+                            onBack = { showAnalysis = false }
+                        )
+                    } else if (showAttitude) {
                         val attitudeViewModel: AttitudeViewModel = viewModel()
                         LaunchedEffect(location) {
                             location?.let {
@@ -191,6 +200,9 @@ class MainActivity : ComponentActivity() {
                             },
                             onAttitudeClick = {
                                 showAttitude = true
+                            },
+                            onAnalysisClick = {
+                                showAnalysis = true
                             }
                         )
                     }
@@ -227,7 +239,8 @@ fun MainScreen(
     onStopTracking: () -> Unit,
     onViewTracks: () -> Unit,
     onMapClick: () -> Unit,
-    onAttitudeClick: () -> Unit
+    onAttitudeClick: () -> Unit,
+    onAnalysisClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -445,6 +458,38 @@ fun MainScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "测量岩层走向/倾角/倾向",
+                    fontSize = 14.sp,
+                    color = Color(0xFF475569)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 分析工具卡片
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onAnalysisClick() },
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFFEF3C7).copy(alpha = 0.6f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "📊 地质分析",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFD97706)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "赤平投影 · 玫瑰花图 · 统计分析",
                     fontSize = 14.sp,
                     color = Color(0xFF475569)
                 )

@@ -1,6 +1,10 @@
 package com.geosurvey.toolbox.presentation
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
@@ -17,8 +21,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
+import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
+import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
+import com.geosurvey.toolbox.presentation.viewmodel.TrackingViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import java.text.SimpleDateFormat
@@ -26,12 +34,28 @@ import java.util.*
 
 class MainActivity : ComponentActivity() {
     private lateinit var locationHelper: LocationHelper
+    private var trackingReceiver: BroadcastReceiver? = null
 
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         locationHelper = LocationHelper(this)
+
+        // 注册轨迹状态广播接收器
+        trackingReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == "com.geosurvey.toolbox.TRACKING_STATUS") {
+                    val isRecording = intent.getBooleanExtra("isRecording", false)
+                    val trackId = intent.getStringExtra("trackId") ?: ""
+                    val pointCount = intent.getIntExtra("pointCount", 0)
+                    // 状态会通过ViewModel更新
+                }
+            }
+        }
+        IntentFilter("com.geosurvey.toolbox.TRACKING_STATUS").also {
+            registerReceiver(trackingReceiver, it, Context.RECEIVER_NOT_EXPORTED)
+        }
 
         setContent {
             GeoSurveyTheme {
@@ -42,7 +66,9 @@ class MainActivity : ComponentActivity() {
                     val permissionsState = rememberMultiplePermissionsState(
                         permissions = listOf(
                             Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                            Manifest.permission.POST_NOTIFICATIONS
                         )
                     )
 
@@ -65,12 +91,13 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // 状态
+                    // 定位状态
                     var location by remember { mutableStateOf<Location?>(null) }
                     var isSearching by remember { mutableStateOf(true) }
                     var gnssData by remember { mutableStateOf(GnssStatusData(emptyList(), 0, 0, 0f, 0f, 0f)) }
                     var timeText by remember { mutableStateOf("--:--:--") }
                     var showDialog by remember { mutableStateOf(false) }
+                    var showTrackList by remember { mutableStateOf(false) }
 
                     // 监听GPS数据
                     LaunchedEffect(hasPermission) {
@@ -89,19 +116,51 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    MainScreen(
-                        hasPermission = hasPermission,
-                        onRequestPermission = {
-                            permissionsState.launchMultiplePermissionRequest()
-                        },
-                        location = location,
-                        isSearching = isSearching,
-                        gnssData = gnssData,
-                        timeText = timeText,
-                        onCardClick = { showDialog = true }
-                    )
+                    // 轨迹ViewModel
+                    val trackingViewModel: TrackingViewModel = viewModel()
+                    val trackingState by trackingViewModel.uiState.collectAsState()
 
-                    // 全屏弹窗
+                    // 页面切换
+                    if (showTrackList) {
+                        TrackListScreen(
+                            tracks = trackingState.trackList,
+                            onTrackClick = { trackId ->
+                                // TODO: 查看轨迹详情（阶段5实现）
+                            },
+                            onDeleteTrack = { trackId ->
+                                trackingViewModel.deleteTrack(trackId)
+                            },
+                            onBack = { showTrackList = false }
+                        )
+                    } else {
+                        MainScreen(
+                            hasPermission = hasPermission,
+                            onRequestPermission = {
+                                permissionsState.launchMultiplePermissionRequest()
+                            },
+                            location = location,
+                            isSearching = isSearching,
+                            gnssData = gnssData,
+                            timeText = timeText,
+                            onCardClick = { 
+                                if (!isSearching && location != null) {
+                                    showDialog = true
+                                }
+                            },
+                            trackingState = trackingState,
+                            onStartTracking = { 
+                                trackingViewModel.startRecording() 
+                            },
+                            onStopTracking = { 
+                                trackingViewModel.stopRecording() 
+                            },
+                            onViewTracks = { 
+                                trackingViewModel.loadAllTracks()
+                                showTrackList = true 
+                            }
+                        )
+                    }
+
                     if (showDialog) {
                         GnssFullScreenDialog(
                             statusData = gnssData,
@@ -116,6 +175,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         locationHelper.stopLocationUpdates()
+        trackingReceiver?.let { unregisterReceiver(it) }
     }
 }
 
@@ -127,7 +187,11 @@ fun MainScreen(
     isSearching: Boolean,
     gnssData: GnssStatusData,
     timeText: String,
-    onCardClick: () -> Unit
+    onCardClick: () -> Unit,
+    trackingState: com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState,
+    onStartTracking: () -> Unit,
+    onStopTracking: () -> Unit,
+    onViewTracks: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -185,11 +249,11 @@ fun MainScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // 定位卡片 - 可点击展开
+        // 定位卡片
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { if (!isSearching && location != null) onCardClick() },
+                .clickable { onCardClick() },
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFE8F0FE).copy(alpha = 0.7f)
             ),
@@ -264,14 +328,6 @@ fun MainScreen(
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8)
                     )
-                    if (hasPermission && isSearching) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "⏳ 首次定位可能需要30-60秒",
-                            fontSize = 12.sp,
-                            color = Color(0xFFF59E0B)
-                        )
-                    }
                 }
             }
         }
@@ -279,44 +335,21 @@ fun MainScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // 轨迹记录卡片
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFECFDF5).copy(alpha = 0.7f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "🛣️ 轨迹记录",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF10B981)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = if (!isSearching && location != null) {
-                        "📍 当前位置: %.4f, %.4f".format(location!!.latitude, location!!.longitude)
-                    } else {
-                        "⏳ 等待定位..."
-                    },
-                    fontSize = 14.sp,
-                    color = Color(0xFF475569)
-                )
-            }
-        }
+        TrackingCard(
+            isRecording = trackingState.isRecording,
+            pointCount = trackingState.pointCount,
+            onStartClick = onStartTracking,
+            onStopClick = onStopTracking,
+            onViewTracksClick = onViewTracks
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 产状测量卡片
+        // 产状测量卡片（占位）
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF5F3FF).copy(alpha = 0.7f)
+                containerColor = Color(0xFFF5F3FF).copy(alpha = 0.6f)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {

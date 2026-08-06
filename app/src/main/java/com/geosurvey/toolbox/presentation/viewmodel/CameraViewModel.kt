@@ -63,7 +63,6 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun loadPhotos() {
-        // 保留空列表
         _uiState.value = _uiState.value.copy(photoList = emptyList())
     }
 
@@ -77,7 +76,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         val fileName = "geo_${System.currentTimeMillis()}.jpg"
         val filePath = getApplication().filesDir.absolutePath + "/" + fileName
 
-        // 创建模拟 PhotoEntity
+        // 使用 data class copy 创建新实体
         val photoEntity = PhotoEntity(
             imagePath = filePath,
             latitude = state.currentLocation?.latitude ?: 0.0,
@@ -91,11 +90,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             watermarkText = watermarkText
         )
 
-        // 使用不可变列表操作
-        val currentList = _uiState.value.photoList
-        val newList = mutableListOf<PhotoEntity>()
-        newList.addAll(currentList)
-        newList.add(0, photoEntity)
+        // 使用 + 操作符创建新列表
+        val newList = listOf(photoEntity) + _uiState.value.photoList
         
         _uiState.value = _uiState.value.copy(
             isTakingPhoto = false,
@@ -139,13 +135,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun deletePhoto(photoId: Long) {
-        val currentList = _uiState.value.photoList
-        val newList = mutableListOf<PhotoEntity>()
-        for (photo in currentList) {
-            if (photo.id != photoId) {
-                newList.add(photo)
-            }
-        }
+        // 使用 filter 过滤
+        val newList = _uiState.value.photoList.filter { it.id != photoId }
         _uiState.value = _uiState.value.copy(photoList = newList)
     }
 }

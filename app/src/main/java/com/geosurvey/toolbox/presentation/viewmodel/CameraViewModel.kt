@@ -1,11 +1,14 @@
 package com.geosurvey.toolbox.presentation.viewmodel
 
 import android.app.Application
+import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.location.Location
+import android.os.Build
+import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.geosurvey.toolbox.data.database.AppDatabase
@@ -99,23 +102,18 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 val state = _uiState.value
                 val config = state.watermarkConfig
 
-                // 生成水印文本
                 val watermarkText = buildWatermarkText(state, locationName)
-
-                // 绘制水印
                 val watermarkedBitmap = addWatermark(originalBitmap, watermarkText, config)
 
-                // 保存到文件
                 val fileName = "geo_${System.currentTimeMillis()}.jpg"
                 val file = File(getApplication().filesDir, fileName)
                 FileOutputStream(file).use { outputStream ->
                     watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
                 }
 
-                // 保存到相册（Android 10+使用MediaStore）
+                // 保存到相册
                 saveToGallery(watermarkedBitmap, fileName)
 
-                // 保存到数据库
                 val photoEntity = PhotoEntity(
                     imagePath = file.absolutePath,
                     latitude = state.currentLocation?.latitude ?: 0.0,
@@ -198,7 +196,6 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             setShadowLayer(8f, 0f, 0f, android.graphics.Color.BLACK)
         }
 
-        // 计算文字位置
         val lines = text.split("\n")
         var textHeight = 0f
         val textWidths = lines.map { line ->
@@ -208,7 +205,6 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
         val maxWidth = textWidths.maxOrNull() ?: 0f
 
-        // 边距
         val padding = 40f
         val x = when (config.position) {
             WatermarkPosition.TOP_LEFT, WatermarkPosition.BOTTOM_LEFT, WatermarkPosition.CENTER -> padding
@@ -220,7 +216,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             WatermarkPosition.CENTER -> canvas.height / 2f + (lines.size * paint.textSize) / 2f
         }
 
-        // 绘制半透明背景
+        // 半透明背景
         val bgPaint = Paint().apply {
             color = android.graphics.Color.BLACK
             alpha = (config.opacity * 0.3f * 255).toInt()
@@ -232,7 +228,6 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         val bgHeight = lines.size * (paint.textSize + 10) + 40
         canvas.drawRoundRect(bgX, bgY, bgX + bgWidth, bgY + bgHeight, 20f, 20f, bgPaint)
 
-        // 绘制文字
         var currentY = y
         for (line in lines) {
             val lineX = when (config.position) {
@@ -248,18 +243,19 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun saveToGallery(bitmap: Bitmap, fileName: String) {
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                val contentValues = android.content.ContentValues().apply {
-                    put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, fileName)
-                    put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                    put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GeoSurvey")
+            val context = getApplication()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GeoSurvey")
                 }
-                val uri = getApplication().contentResolver.insert(
-                    android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                val uri = context.contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     contentValues
                 )
                 uri?.let {
-                    getApplication().contentResolver.openOutputStream(it)?.use { outputStream ->
+                    context.contentResolver.openOutputStream(it)?.use { outputStream ->
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
                     }
                 }

@@ -22,8 +22,22 @@ android {
         }
     }
 
+    // 签名配置
+    signingConfigs {
+        create("release") {
+            val keystoreFile = file("keystore.jks")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "123456"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "geo_key"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "123456"
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

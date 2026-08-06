@@ -1,6 +1,10 @@
 package com.geosurvey.toolbox.presentation.viewmodel
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.geosurvey.toolbox.data.database.AppDatabase
@@ -34,8 +38,38 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
     private val _uiState = MutableStateFlow(TrackingUiState())
     val uiState: StateFlow<TrackingUiState> = _uiState.asStateFlow()
 
+    private val statusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.geosurvey.toolbox.TRACKING_STATUS") {
+                val isRecording = intent.getBooleanExtra("isRecording", false)
+                val trackId = intent.getStringExtra("trackId")
+                val pointCount = intent.getIntExtra("pointCount", 0)
+                _uiState.value = _uiState.value.copy(
+                    isRecording = isRecording,
+                    currentTrackId = trackId,
+                    pointCount = pointCount
+                )
+                if (!isRecording) {
+                    loadAllTracks()
+                }
+            }
+        }
+    }
+
     init {
+        // 注册广播接收器
+        val filter = IntentFilter("com.geosurvey.toolbox.TRACKING_STATUS")
+        getApplication<Application>().registerReceiver(statusReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         loadAllTracks()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        try {
+            getApplication<Application>().unregisterReceiver(statusReceiver)
+        } catch (e: Exception) {
+            // 忽略
+        }
     }
 
     fun startRecording() {
@@ -59,7 +93,6 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                // 使用 first() 从 Flow 中获取值，需要导入 kotlinx.coroutines.flow.first
                 val trackIds = database.trackPointDao().getAllTrackIds().first()
                 val summaries = mutableListOf<TrackSummary>()
                 for (id in trackIds) {

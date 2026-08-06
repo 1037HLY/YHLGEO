@@ -1,8 +1,5 @@
 package com.geosurvey.toolbox.presentation.ui.screens
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -24,8 +21,8 @@ import org.osmdroid.util.GeoPoint
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
-    trackPoints: List<TrackPointEntity> = emptyList(),
-    currentLocation: android.location.Location? = null,
+    trackPoints: List<TrackPointEntity>,
+    currentLocation: android.location.Location?,
     onBack: () -> Unit,
     onCenterLocation: () -> Unit
 ) {

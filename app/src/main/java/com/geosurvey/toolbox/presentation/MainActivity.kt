@@ -1,6 +1,7 @@
 package com.geosurvey.toolbox.presentation
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.geosurvey.toolbox.data.repository.LocationRepository
 import com.geosurvey.toolbox.domain.usecase.GetLocationUseCase
@@ -48,21 +50,32 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // 创建ViewModel
-                    val repository = LocationRepository(applicationContext)
-                    val useCase = GetLocationUseCase(repository)
-                    val viewModel: LocationViewModel = viewModel(
-                        factory = androidx.lifecycle.ViewModelProvider.NewInstanceFactory().apply {
-                            // 简单的依赖注入
+                    // 检查是否有定位权限
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    // 创建ViewModel - 只有有权限时才创建
+                    val viewModel = if (hasPermission) {
+                        try {
+                            val repository = LocationRepository(applicationContext)
+                            val useCase = GetLocationUseCase(repository)
+                            LocationViewModel(useCase)
+                        } catch (e: Exception) {
+                            null
                         }
-                    )
-                    // 由于上面工厂方式无法传递参数，我们手动创建
-                    // 实际项目中建议使用Hilt等DI框架
-                    val vm = remember {
-                        LocationViewModel(useCase)
+                    } else {
+                        null
                     }
 
-                    MainScreen(vm)
+                    MainScreen(
+                        viewModel = viewModel,
+                        hasPermission = hasPermission,
+                        onRequestPermission = {
+                            permissionsState.launchMultiplePermissionRequest()
+                        }
+                    )
                 }
             }
         }
@@ -70,8 +83,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainScreen(viewModel: LocationViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
+fun MainScreen(
+    viewModel: LocationViewModel?,
+    hasPermission: Boolean,
+    onRequestPermission: () -> Unit
+) {
+    val uiState = viewModel?.uiState?.collectAsState()
 
     Column(
         modifier = Modifier
@@ -79,7 +96,6 @@ fun MainScreen(viewModel: LocationViewModel) {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 标题
         Text(
             text = "🏔️ 地质勘查工具箱",
             fontSize = 32.sp,
@@ -97,13 +113,77 @@ fun MainScreen(viewModel: LocationViewModel) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 定位卡片（动态显示数据）
-        LocationCard(
-            location = uiState.location,
-            satelliteCount = uiState.satelliteCount,
-            qualityText = uiState.qualityText,
-            modifier = Modifier
-        )
+        // 权限状态提示
+        if (!hasPermission) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFFF3E0).copy(alpha = 0.8f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "⚠️ 需要定位权限",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFE65100)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = onRequestPermission,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF0EA5E9)
+                        )
+                    ) {
+                        Text("授予权限")
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // 定位卡片
+        if (viewModel != null && hasPermission) {
+            val state = uiState?.value
+            LocationCard(
+                location = state?.location,
+                satelliteCount = state?.satelliteCount ?: 0,
+                qualityText = state?.qualityText ?: "等待定位...",
+                modifier = Modifier
+            )
+        } else {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFE8F0FE).copy(alpha = 0.6f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "📍 GPS定位",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF0EA5E9)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (hasPermission) "等待卫星信号..." else "请先授予定位权限",
+                        fontSize = 14.sp,
+                        color = Color(0xFF475569)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

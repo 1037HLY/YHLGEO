@@ -25,9 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
 import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
-import com.geosurvey.toolbox.presentation.ui.screens.CameraScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
-import com.geosurvey.toolbox.presentation.viewmodel.CameraViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -44,7 +42,6 @@ class MainActivity : ComponentActivity() {
 
         locationHelper = LocationHelper(this)
 
-        // 注册轨迹状态广播接收器
         trackingReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action == "com.geosurvey.toolbox.TRACKING_STATUS") {
@@ -67,8 +64,7 @@ class MainActivity : ComponentActivity() {
                             Manifest.permission.ACCESS_FINE_LOCATION,
                             Manifest.permission.ACCESS_COARSE_LOCATION,
                             Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-                            Manifest.permission.POST_NOTIFICATIONS,
-                            Manifest.permission.CAMERA
+                            Manifest.permission.POST_NOTIFICATIONS
                         )
                     )
 
@@ -91,16 +87,13 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // 定位状态
                     var location by remember { mutableStateOf<Location?>(null) }
                     var isSearching by remember { mutableStateOf(true) }
                     var gnssData by remember { mutableStateOf(GnssStatusData(emptyList(), 0, 0, 0f, 0f, 0f)) }
                     var timeText by remember { mutableStateOf("--:--:--") }
                     var showDialog by remember { mutableStateOf(false) }
                     var showTrackList by remember { mutableStateOf(false) }
-                    var showCamera by remember { mutableStateOf(false) }
 
-                    // 监听GPS数据
                     LaunchedEffect(hasPermission) {
                         if (hasPermission) {
                             locationHelper.startLocationUpdates(
@@ -117,26 +110,10 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // 轨迹ViewModel
                     val trackingViewModel: TrackingViewModel = viewModel()
                     val trackingState by trackingViewModel.uiState.collectAsState()
 
-                    // 相机ViewModel
-                    val cameraViewModel: CameraViewModel = viewModel()
-                    // 传递当前定位数据到相机
-                    LaunchedEffect(location) {
-                        location?.let {
-                            cameraViewModel.updateLocation(it)
-                        }
-                    }
-
-                    // 页面切换
-                    if (showCamera) {
-                        CameraScreen(
-                            viewModel = cameraViewModel,
-                            onBack = { showCamera = false }
-                        )
-                    } else if (showTrackList) {
+                    if (showTrackList) {
                         TrackListScreen(
                             tracks = trackingState.trackList,
                             onTrackClick = { trackId ->
@@ -172,9 +149,6 @@ class MainActivity : ComponentActivity() {
                             onViewTracks = {
                                 trackingViewModel.loadAllTracks()
                                 showTrackList = true
-                            },
-                            onCameraClick = {
-                                showCamera = true
                             }
                         )
                     }
@@ -206,11 +180,10 @@ fun MainScreen(
     gnssData: GnssStatusData,
     timeText: String,
     onCardClick: () -> Unit,
-    trackingState: com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState,
+    trackingState: TrackingUiState,
     onStartTracking: () -> Unit,
     onStopTracking: () -> Unit,
-    onViewTracks: () -> Unit,
-    onCameraClick: () -> Unit
+    onViewTracks: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -386,38 +359,6 @@ fun MainScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "阶段6开发中",
-                    fontSize = 14.sp,
-                    color = Color(0xFF475569)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 水印相机卡片
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onCameraClick() },
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFFFF3E0).copy(alpha = 0.6f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "📷 水印相机",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFF59E0B)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "拍照并叠加坐标/时间/产状水印",
                     fontSize = 14.sp,
                     color = Color(0xFF475569)
                 )

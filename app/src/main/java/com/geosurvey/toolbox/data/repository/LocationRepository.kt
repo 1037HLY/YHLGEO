@@ -78,19 +78,15 @@ class LocationRepository(
      * 获取当前GNSS卫星状态 - 使用兼容方式
      */
     private fun getGnssStatus(): GnssInfo {
-        // 如果GPS未启用，直接返回空
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             return GnssInfo()
         }
 
         try {
-            // 使用反射方式调用，避免编译时API检查
             val gnssStatus = try {
-                // 尝试获取GnssStatus（Android 7.0+）
                 val method = locationManager.javaClass.getMethod("getGnssStatus")
                 method.invoke(locationManager) as? GnssStatus
             } catch (e: Exception) {
-                // 如果失败，尝试使用旧版API获取卫星信息
                 return getLegacySatelliteInfo()
             }
 
@@ -143,17 +139,14 @@ class LocationRepository(
             val satellites = mutableListOf<SatelliteInfo>()
             var count = 0
 
-            // 尝试获取GpsStatus
             val gpsStatus = locationManager.getGpsStatus(null)
             if (gpsStatus != null) {
-                val iter = gpsStatus.satellites
-                // 使用Kotlin的while循环
-                while (iter.hasNext()) {
-                    val sat = iter.next()
+                // 使用for循环遍历迭代器（Kotlin方式）
+                for (sat in gpsStatus.satellites) {
                     count++
                     satellites.add(
                         SatelliteInfo(
-                            constellation = Constellation.GPS, // 旧API只支持GPS
+                            constellation = Constellation.GPS,
                             prn = sat.prn,
                             snr = sat.snr,
                             usedInFix = sat.usedInFix(),

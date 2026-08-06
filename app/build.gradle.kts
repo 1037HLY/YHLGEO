@@ -104,10 +104,16 @@ dependencies {
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-    // osmdroid - OpenStreetMap
-    implementation("org.osmdroid:osmdroid-android:6.1.17")
-    implementation("org.osmdroid:osmdroid-mapsforge:6.1.17")
-    implementation("org.osmdroid:osmdroid-geopackage:6.1.17")
+    // osmdroid - OpenStreetMap (排除重复的ormlite)
+    implementation("org.osmdroid:osmdroid-android:6.1.17") {
+        exclude(group = "com.j256.ormlite")
+    }
+    implementation("org.osmdroid:osmdroid-mapsforge:6.1.17") {
+        exclude(group = "com.j256.ormlite")
+    }
+    implementation("org.osmdroid:osmdroid-geopackage:6.1.17") {
+        exclude(group = "com.j256.ormlite")
+    }
 
     // Testing
     testImplementation("junit:junit:4.13.2")

@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.geosurvey.toolbox.data.database.TrackPointEntity
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
 import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
@@ -118,15 +119,13 @@ class MainActivity : ComponentActivity() {
 
                     // 页面切换
                     if (showMap) {
-                        // 获取选中的轨迹点
                         val selectedTrackId = trackingState.trackList.firstOrNull()?.trackId
                         val trackPoints = if (selectedTrackId != null) {
                             remember(selectedTrackId) {
-                                // 从数据库加载轨迹点
-                                emptyList()
+                                emptyList<TrackPointEntity>()
                             }
                         } else {
-                            emptyList()
+                            emptyList<TrackPointEntity>()
                         }
                         MapScreen(
                             trackPoints = trackPoints,
@@ -140,7 +139,6 @@ class MainActivity : ComponentActivity() {
                         TrackListScreen(
                             tracks = trackingState.trackList,
                             onTrackClick = { trackId ->
-                                // 点击轨迹跳转到地图
                                 showMap = true
                             },
                             onDeleteTrack = { trackId ->

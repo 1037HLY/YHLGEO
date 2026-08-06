@@ -60,12 +60,16 @@ class LocationHelper(private val context: Context) {
                 }
                 locationManager.registerGnssStatusCallback(gnssStatusListener!!)
             } else {
-                // 旧版本使用GpsStatus
+                // 旧版本使用GpsStatus - 使用兼容方式
+                @Suppress("DEPRECATION")
                 locationManager.addGpsStatusListener { event ->
                     if (event == LocationManager.GPS_EVENT_SATELLITE_STATUS) {
+                        @Suppress("DEPRECATION")
                         val gpsStatus = locationManager.getGpsStatus(null)
-                        val data = parseGpsStatus(gpsStatus)
-                        onGnssStatusUpdate(data)
+                        if (gpsStatus != null) {
+                            val data = parseGpsStatus(gpsStatus)
+                            onGnssStatusUpdate(data)
+                        }
                     }
                 }
             }
@@ -98,9 +102,8 @@ class LocationHelper(private val context: Context) {
     @Suppress("DEPRECATION")
     private fun parseGpsStatus(status: android.location.GpsStatus): GnssStatusData {
         val satellites = mutableListOf<SatelliteDetail>()
-        val iterator = status.satellites
-        while (iterator.hasNext()) {
-            val sat = iterator.next()
+        // 使用Kotlin的for循环遍历Iterable
+        for (sat in status.satellites) {
             satellites.add(
                 SatelliteDetail(
                     prn = sat.prn,
@@ -116,7 +119,7 @@ class LocationHelper(private val context: Context) {
             satellites = satellites,
             usedCount = satellites.count { it.usedInFix },
             totalCount = satellites.size,
-            hdop = 1.5f,  // 实际应从NMEA解析
+            hdop = 1.5f,
             vdop = 2.0f,
             pdop = 2.5f
         )

@@ -28,7 +28,6 @@ class LocationHelper(private val context: Context) {
         }
 
         try {
-            // 位置监听
             locationListener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
                     onLocationUpdate(location)
@@ -60,10 +59,11 @@ class LocationHelper(private val context: Context) {
                 }
                 locationManager.registerGnssStatusCallback(gnssStatusListener!!)
             } else {
-                // 旧版本使用GpsStatus - 使用兼容方式
+                // 旧版本使用GpsStatus - 使用数字常量
                 @Suppress("DEPRECATION")
                 locationManager.addGpsStatusListener { event ->
-                    if (event == LocationManager.GPS_EVENT_SATELLITE_STATUS) {
+                    // 1 = GPS_EVENT_SATELLITE_STATUS
+                    if (event == 1) {
                         @Suppress("DEPRECATION")
                         val gpsStatus = locationManager.getGpsStatus(null)
                         if (gpsStatus != null) {
@@ -102,7 +102,6 @@ class LocationHelper(private val context: Context) {
     @Suppress("DEPRECATION")
     private fun parseGpsStatus(status: android.location.GpsStatus): GnssStatusData {
         val satellites = mutableListOf<SatelliteDetail>()
-        // 使用Kotlin的for循环遍历Iterable
         for (sat in status.satellites) {
             satellites.add(
                 SatelliteDetail(

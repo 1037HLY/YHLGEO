@@ -57,6 +57,7 @@ fun CameraScreen(
                 val bitmap = BitmapFactory.decodeFile(path)
                 if (bitmap != null) {
                     capturedBitmap = bitmap
+                    // 保存带水印的照片
                     viewModel.savePhotoWithWatermark(bitmap)
                 }
             }
@@ -79,6 +80,11 @@ fun CameraScreen(
             != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
+    }
+
+    // 自动加载照片列表
+    LaunchedEffect(Unit) {
+        viewModel.loadPhotos()
     }
 
     Column(
@@ -119,13 +125,13 @@ fun CameraScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 相机预览窗口
+        // 相机预览窗口（实时预览）
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp),
+                .height(300.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFE8F0FE).copy(alpha = 0.7f)
+                containerColor = Color(0xFF1A1A2E)
             ),
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -149,25 +155,31 @@ fun CameraScreen(
                         contentDescription = "拍摄的照片",
                         modifier = Modifier.fillMaxSize()
                     )
-                    // 预览提示
-                    Text(
-                        text = "📷 点击下方按钮重新拍摄",
-                        fontSize = 12.sp,
-                        color = Color.White,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
                 } else {
-                    Text(
-                        text = "📷 点击下方按钮拍照",
-                        fontSize = 18.sp,
-                        color = Color(0xFF475569)
-                    )
+                    // 预览占位
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "📷",
+                            fontSize = 64.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "点击下方按钮拍照",
+                            fontSize = 16.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                        Text(
+                            text = "照片将自动添加水印并保存到相册",
+                            fontSize = 12.sp,
+                            color = Color(0xFF64748B)
+                        )
+                    }
                 }
 
-                // 拍摄按钮
+                // 拍摄按钮（覆盖在预览窗口底部）
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -205,93 +217,87 @@ fun CameraScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 产状输入区（修复字体颜色）
-        if (uiState.watermarkConfig.showAttitude) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFF5F3FF).copy(alpha = 0.8f)
-                ),
-                shape = RoundedCornerShape(12.dp)
+        // 产状输入区
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFF5F3FF).copy(alpha = 0.8f)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(12.dp)
+                Text(
+                    text = "📐 产状信息",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF5B21B6)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "📐 产状信息",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF5B21B6)  // 深紫色，更清晰
+                    OutlinedTextField(
+                        value = uiState.strike?.toString() ?: "",
+                        onValueChange = {
+                            val value = it.toFloatOrNull()
+                            viewModel.updateAttitude(value, uiState.dip, uiState.dipDirection)
+                        },
+                        label = { Text("走向 (°)", color = Color(0xFF374151)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color(0xFF1F2937),
+                            unfocusedTextColor = Color(0xFF1F2937)
+                        )
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = uiState.strike?.toString() ?: "",
-                            onValueChange = {
-                                val value = it.toFloatOrNull()
-                                viewModel.updateAttitude(value, uiState.dip, uiState.dipDirection)
-                            },
-                            label = { Text("走向 (°)", color = Color(0xFF374151)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color(0xFF1F2937),
-                                unfocusedTextColor = Color(0xFF1F2937)
-                            )
+                    OutlinedTextField(
+                        value = uiState.dip?.toString() ?: "",
+                        onValueChange = {
+                            val value = it.toFloatOrNull()
+                            viewModel.updateAttitude(uiState.strike, value, uiState.dipDirection)
+                        },
+                        label = { Text("倾角 (°)", color = Color(0xFF374151)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color(0xFF1F2937),
+                            unfocusedTextColor = Color(0xFF1F2937)
                         )
-                        OutlinedTextField(
-                            value = uiState.dip?.toString() ?: "",
-                            onValueChange = {
-                                val value = it.toFloatOrNull()
-                                viewModel.updateAttitude(uiState.strike, value, uiState.dipDirection)
-                            },
-                            label = { Text("倾角 (°)", color = Color(0xFF374151)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color(0xFF1F2937),
-                                unfocusedTextColor = Color(0xFF1F2937)
-                            )
+                    )
+                    OutlinedTextField(
+                        value = uiState.dipDirection?.toString() ?: "",
+                        onValueChange = {
+                            val value = it.toFloatOrNull()
+                            viewModel.updateAttitude(uiState.strike, uiState.dip, value)
+                        },
+                        label = { Text("倾向 (°)", color = Color(0xFF374151)) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color(0xFF1F2937),
+                            unfocusedTextColor = Color(0xFF1F2937)
                         )
-                        OutlinedTextField(
-                            value = uiState.dipDirection?.toString() ?: "",
-                            onValueChange = {
-                                val value = it.toFloatOrNull()
-                                viewModel.updateAttitude(uiState.strike, uiState.dip, value)
-                            },
-                            label = { Text("倾向 (°)", color = Color(0xFF374151)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color(0xFF1F2937),
-                                unfocusedTextColor = Color(0xFF1F2937)
-                            )
-                        )
-                    }
+                    )
                 }
             }
         }
 
-        // 备注输入（修复字体颜色）
-        if (uiState.watermarkConfig.showNote) {
-            Spacer(modifier = Modifier.height(4.dp))
-            OutlinedTextField(
-                value = uiState.note,
-                onValueChange = { viewModel.updateNote(it) },
-                label = { Text("📝 备注", color = Color(0xFF374151)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = false,
-                maxLines = 2,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color(0xFF1F2937),
-                    unfocusedTextColor = Color(0xFF1F2937)
-                )
-            )
-        }
-
+        // 备注输入
         Spacer(modifier = Modifier.height(4.dp))
+        OutlinedTextField(
+            value = uiState.note,
+            onValueChange = { viewModel.updateNote(it) },
+            label = { Text("📝 备注", color = Color(0xFF374151)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = false,
+            maxLines = 2,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color(0xFF1F2937),
+                unfocusedTextColor = Color(0xFF1F2937)
+            )
+        )
 
         // 水印设置弹窗
         if (showWatermarkSettings) {
@@ -301,6 +307,8 @@ fun CameraScreen(
                 onDismiss = { showWatermarkSettings = false }
             )
         }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         // 历史照片列表
         Row(
@@ -327,7 +335,7 @@ fun CameraScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
+                    .height(60.dp)
                     .background(Color(0xFFF1F5F9), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {

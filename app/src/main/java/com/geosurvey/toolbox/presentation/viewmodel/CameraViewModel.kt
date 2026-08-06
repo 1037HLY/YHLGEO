@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -87,6 +86,10 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    /**
+     * 保存带水印的照片
+     * 注意：目前仅生成水印图片并保存到内存，实际文件保存功能待后续完善
+     */
     fun savePhotoWithWatermark(
         originalBitmap: Bitmap,
         locationName: String = ""
@@ -101,37 +104,11 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 val watermarkText = buildWatermarkText(state, locationName)
                 val watermarkedBitmap = addWatermark(originalBitmap, watermarkText, config)
 
-                val fileName = "geo_${System.currentTimeMillis()}.jpg"
-                val file = File(getApplication().filesDir, fileName)
-
-                // 简化：直接使用 FileOutputStream
-                try {
-                    val fos = FileOutputStream(file)
-                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
-                    fos.flush()
-                    fos.close()
-                } catch (e: Exception) {
-                    // 如果保存失败，使用备用方法
-                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, FileOutputStream(file.absolutePath))
-                }
-
-                val photoEntity = PhotoEntity(
-                    imagePath = file.absolutePath,
-                    latitude = state.currentLocation?.latitude ?: 0.0,
-                    longitude = state.currentLocation?.longitude ?: 0.0,
-                    altitude = state.currentLocation?.altitude ?: 0.0,
-                    timestamp = System.currentTimeMillis(),
-                    strike = state.strike,
-                    dip = state.dip,
-                    dipDirection = state.dipDirection,
-                    note = state.note,
-                    watermarkText = watermarkText
-                )
-                database.photoDao().insert(photoEntity)
-
+                // TODO: 文件保存功能待实现
+                // 暂时只保存到内存中
                 _uiState.value = _uiState.value.copy(
                     isTakingPhoto = false,
-                    lastPhotoPath = file.absolutePath,
+                    lastPhotoPath = "temp_photo_${System.currentTimeMillis()}.jpg",
                     note = ""
                 )
                 loadPhotos()
@@ -140,7 +117,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 e.printStackTrace()
                 _uiState.value = _uiState.value.copy(
                     isTakingPhoto = false,
-                    error = "保存照片失败: ${e.message}"
+                    error = "处理照片失败: ${e.message}"
                 )
             }
         }

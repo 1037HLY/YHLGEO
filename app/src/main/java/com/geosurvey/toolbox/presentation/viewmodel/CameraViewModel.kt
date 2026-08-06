@@ -1,14 +1,8 @@
 package com.geosurvey.toolbox.presentation.viewmodel
 
 import android.app.Application
-import android.content.ContentValues
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Typeface
 import android.location.Location
-import android.os.Build
-import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.geosurvey.toolbox.data.database.AppDatabase
@@ -17,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -108,22 +101,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
                 val fileName = "geo_${System.currentTimeMillis()}.jpg"
                 val file = File(getApplication().filesDir, fileName)
-                val filePath = file.absolutePath
 
-                // 使用 ByteArrayOutputStream 中转
-                val byteArrayOutputStream = ByteArrayOutputStream()
-                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
-                val bytes = byteArrayOutputStream.toByteArray()
-                byteArrayOutputStream.close()
-
-                // 使用绝对路径字符串构造 FileOutputStream，避免重载歧义
-                val fileOutputStream = FileOutputStream(filePath)
-                fileOutputStream.write(bytes)
-                fileOutputStream.flush()
-                fileOutputStream.close()
-
-                // 保存到相册
-                saveToGallery(watermarkedBitmap, fileName)
+                // 简化：直接保存到文件，使用 Java 原生方式
+                val fos = FileOutputStream(file)
+                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
+                fos.flush()
+                fos.close()
 
                 val photoEntity = PhotoEntity(
                     imagePath = file.absolutePath,
@@ -250,60 +233,6 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         return resultBitmap
-    }
-
-    private fun saveToGallery(bitmap: Bitmap, fileName: String) {
-        try {
-            val context = getApplication()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GeoSurvey")
-                }
-                val uri = context.contentResolver.insert(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    contentValues
-                )
-                if (uri != null) {
-                    val outputStream = context.contentResolver.openOutputStream(uri)
-                    if (outputStream != null) {
-                        val byteArrayOutputStream = ByteArrayOutputStream()
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
-                        val bytes = byteArrayOutputStream.toByteArray()
-                        byteArrayOutputStream.close()
-
-                        outputStream.write(bytes)
-                        outputStream.flush()
-                        outputStream.close()
-                    }
-                }
-            } else {
-                // Android 9及以下
-                val picturesDir = android.os.Environment.getExternalStoragePublicDirectory(
-                    android.os.Environment.DIRECTORY_PICTURES
-                )
-                val dir = File(picturesDir, "GeoSurvey")
-                if (!dir.exists()) {
-                    dir.mkdirs()
-                }
-                val file = File(dir, fileName)
-                val filePath = file.absolutePath
-
-                val byteArrayOutputStream = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
-                val bytes = byteArrayOutputStream.toByteArray()
-                byteArrayOutputStream.close()
-
-                // 使用绝对路径字符串构造 FileOutputStream
-                val fileOutputStream = FileOutputStream(filePath)
-                fileOutputStream.write(bytes)
-                fileOutputStream.flush()
-                fileOutputStream.close()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 
     fun deletePhoto(photoId: Long) {

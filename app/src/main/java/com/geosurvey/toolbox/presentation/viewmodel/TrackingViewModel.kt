@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.*
 
+/**
+ * 轨迹记录UI状态
+ */
 data class TrackingUiState(
     val isRecording: Boolean = false,
     val currentTrackId: String? = null,
@@ -20,14 +23,21 @@ data class TrackingUiState(
     val isLoading: Boolean = false
 )
 
+/**
+ * 轨迹摘要信息
+ */
 data class TrackSummary(
     val trackId: String,
-    val startTime: Long,  // 改为 Long
-    val endTime: Long?,   // 改为 Long
+    val startTime: Long,
+    val endTime: Long?,
     val pointCount: Int,
     val distance: Float = 0f
 )
 
+/**
+ * 轨迹记录ViewModel
+ * 负责管理轨迹记录状态和历史轨迹数据
+ */
 class TrackingViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
     private val _uiState = MutableStateFlow(TrackingUiState())
@@ -37,6 +47,10 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         loadAllTracks()
     }
 
+    /**
+     * 开始记录轨迹
+     * 生成新的轨迹ID并启动前台服务
+     */
     fun startRecording() {
         val trackId = UUID.randomUUID().toString()
         TrackingService.startService(getApplication(), trackId)
@@ -46,6 +60,10 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
+    /**
+     * 停止记录轨迹
+     * 停止前台服务并刷新轨迹列表
+     */
     fun stopRecording() {
         TrackingService.stopService(getApplication())
         _uiState.value = _uiState.value.copy(
@@ -54,6 +72,10 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         loadAllTracks()
     }
 
+    /**
+     * 加载所有历史轨迹
+     * 从数据库读取所有轨迹ID并生成摘要列表
+     */
     fun loadAllTracks() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -86,6 +108,9 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /**
+     * 删除指定轨迹
+     */
     fun deleteTrack(trackId: String) {
         viewModelScope.launch {
             database.trackPointDao().deleteTrack(trackId)
@@ -93,6 +118,9 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /**
+     * 获取指定轨迹的所有点
+     */
     suspend fun getTrackPoints(trackId: String): List<TrackPointEntity> {
         return database.trackPointDao().getTrackPointsSync(trackId)
     }

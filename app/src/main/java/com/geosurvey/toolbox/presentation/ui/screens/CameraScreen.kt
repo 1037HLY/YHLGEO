@@ -11,17 +11,24 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.geosurvey.toolbox.data.database.PhotoEntity
 import com.geosurvey.toolbox.presentation.viewmodel.CameraViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.WatermarkConfig
 import com.geosurvey.toolbox.presentation.viewmodel.WatermarkPosition
@@ -29,7 +36,6 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreen(
     viewModel: CameraViewModel,
@@ -37,15 +43,14 @@ fun CameraScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showWatermarkSettings by remember { mutableStateOf(false) }
-    var showPhotoPreview by remember { mutableStateOf(false) }
     var previewPhotoPath by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     // 相机启动器
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            // 照片已保存，处理水印
             previewPhotoPath?.let { path ->
                 val bitmap = BitmapFactory.decodeFile(path)
                 if (bitmap != null) {
@@ -67,7 +72,6 @@ fun CameraScreen(
 
     // 检查并请求权限
     LaunchedEffect(Unit) {
-        val context = androidx.compose.ui.platform.LocalContext.current
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
             != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
@@ -95,14 +99,14 @@ fun CameraScreen(
             Row {
                 IconButton(onClick = { showWatermarkSettings = !showWatermarkSettings }) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Settings,
+                        imageVector = Icons.Default.Settings,
                         contentDescription = "水印设置",
                         tint = Color(0xFF0EA5E9)
                     )
                 }
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                        imageVector = Icons.Default.Close,
                         contentDescription = "返回",
                         tint = Color(0xFF475569)
                     )
@@ -125,7 +129,6 @@ fun CameraScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (uiState.lastPhotoPath != null) {
-                    // 显示最近拍摄的照片
                     val bitmap = runCatching {
                         BitmapFactory.decodeFile(uiState.lastPhotoPath)
                     }.getOrNull()
@@ -152,12 +155,11 @@ fun CameraScreen(
                         .size(72.dp)
                         .background(Color(0xFF0EA5E9), RoundedCornerShape(36.dp))
                         .clickable {
-                            val context = androidx.compose.ui.platform.LocalContext.current
-                            val permission = ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.CAMERA
-                            )
-                            if (permission == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                            if (ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.CAMERA
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
                                 val photoFile = File(context.cacheDir, "temp_photo_${System.currentTimeMillis()}.jpg")
                                 previewPhotoPath = photoFile.absolutePath
                                 val uri = FileProvider.getUriForFile(
@@ -279,6 +281,9 @@ fun CameraScreen(
             items(uiState.photoList) { photo ->
                 PhotoHistoryItem(
                     photo = photo,
+                    onView = {
+                        // 查看照片
+                    },
                     onDelete = { viewModel.deletePhoto(photo.id) }
                 )
             }
@@ -381,9 +386,11 @@ fun WatermarkSettingsDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhotoHistoryItem(
-    photo: com.geosurvey.toolbox.data.database.PhotoEntity,
+    photo: PhotoEntity,
+    onView: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -429,22 +436,16 @@ fun PhotoHistoryItem(
                 }
             }
             Row {
-                IconButton(
-                    onClick = {
-                        // 查看照片
-                    }
-                ) {
+                IconButton(onClick = onView) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Visibility,
+                        imageVector = Icons.Default.Visibility,
                         contentDescription = "查看",
                         tint = Color(0xFF0EA5E9)
                     )
                 }
-                IconButton(
-                    onClick = onDelete
-                ) {
+                IconButton(onClick = onDelete) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Delete,
+                        imageVector = Icons.Default.Delete,
                         contentDescription = "删除",
                         tint = Color(0xFFEF4444)
                     )

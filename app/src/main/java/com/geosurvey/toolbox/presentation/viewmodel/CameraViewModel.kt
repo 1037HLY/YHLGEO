@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -100,25 +101,21 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 val watermarkText = buildWatermarkText(state, locationName)
                 val watermarkedBitmap = addWatermark(originalBitmap, watermarkText, config)
 
-                // 简单保存到应用私有目录
                 val fileName = "geo_${System.currentTimeMillis()}.jpg"
                 val file = File(getApplication().filesDir, fileName)
-                val filePath = file.absolutePath
 
-                // 直接使用 Bitmap.compress 保存
-                try {
-                    val fos = java.io.FileOutputStream(file)
-                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
-                    fos.flush()
-                    fos.close()
-                } catch (e: Exception) {
-                    // 如果失败，尝试使用备用方法
-                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, java.io.FileOutputStream(filePath))
-                }
+                // 使用 ByteArrayOutputStream 转为 byte[]
+                val baos = ByteArrayOutputStream()
+                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
+                val imageData = baos.toByteArray()
+                baos.close()
+
+                // 使用 File.writeBytes() 保存 - 不涉及 FileOutputStream
+                file.writeBytes(imageData)
 
                 // 保存到数据库
                 val photoEntity = PhotoEntity(
-                    imagePath = filePath,
+                    imagePath = file.absolutePath,
                     latitude = state.currentLocation?.latitude ?: 0.0,
                     longitude = state.currentLocation?.longitude ?: 0.0,
                     altitude = state.currentLocation?.altitude ?: 0.0,
@@ -133,7 +130,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
                 _uiState.value = _uiState.value.copy(
                     isTakingPhoto = false,
-                    lastPhotoPath = filePath,
+                    lastPhotoPath = file.absolutePath,
                     note = ""
                 )
                 loadPhotos()

@@ -6,6 +6,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.location.Location
+import android.os.Build
+import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.geosurvey.toolbox.data.database.AppDatabase
@@ -14,7 +16,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -86,10 +90,6 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    /**
-     * 保存带水印的照片
-     * 注意：目前仅生成水印图片并保存到内存，实际文件保存功能待后续完善
-     */
     fun savePhotoWithWatermark(
         originalBitmap: Bitmap,
         locationName: String = ""
@@ -104,11 +104,41 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 val watermarkText = buildWatermarkText(state, locationName)
                 val watermarkedBitmap = addWatermark(originalBitmap, watermarkText, config)
 
-                // TODO: 文件保存功能待实现
-                // 暂时只保存到内存中
+                val fileName = "geo_${System.currentTimeMillis()}.jpg"
+                val file = File(getApplication().filesDir, fileName)
+                val filePath = file.absolutePath
+
+                // 保存到应用私有目录
+                val baos = ByteArrayOutputStream()
+                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
+                val bytes = baos.toByteArray()
+                baos.close()
+
+                val fos = FileOutputStream(filePath)
+                fos.write(bytes)
+                fos.flush()
+                fos.close()
+
+                // 保存到相册
+                saveToGallery(watermarkedBitmap, fileName)
+
+                val photoEntity = PhotoEntity(
+                    imagePath = file.absolutePath,
+                    latitude = state.currentLocation?.latitude ?: 0.0,
+                    longitude = state.currentLocation?.longitude ?: 0.0,
+                    altitude = state.currentLocation?.altitude ?: 0.0,
+                    timestamp = System.currentTimeMillis(),
+                    strike = state.strike,
+                    dip = state.dip,
+                    dipDirection = state.dipDirection,
+                    note = state.note,
+                    watermarkText = watermarkText
+                )
+                database.photoDao().insert(photoEntity)
+
                 _uiState.value = _uiState.value.copy(
                     isTakingPhoto = false,
-                    lastPhotoPath = "temp_photo_${System.currentTimeMillis()}.jpg",
+                    lastPhotoPath = file.absolutePath,
                     note = ""
                 )
                 loadPhotos()
@@ -117,7 +147,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 e.printStackTrace()
                 _uiState.value = _uiState.value.copy(
                     isTakingPhoto = false,
-                    error = "处理照片失败: ${e.message}"
+                    error = "保存照片失败: ${e.message}"
                 )
             }
         }
@@ -213,6 +243,59 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         return resultBitmap
+    }
+
+    private fun saveToGallery(bitmap: Bitmap, fileName: String) {
+        try {
+            val context = getApplication()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = android.content.ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GeoSurvey")
+                }
+                val uri = context.contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    contentValues
+                )
+                if (uri != null) {
+                    val outputStream = context.contentResolver.openOutputStream(uri)
+                    if (outputStream != null) {
+                        val baos = ByteArrayOutputStream()
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
+                        val bytes = baos.toByteArray()
+                        baos.close()
+
+                        outputStream.write(bytes)
+                        outputStream.flush()
+                        outputStream.close()
+                    }
+                }
+            } else {
+                // Android 9及以下
+                val picturesDir = android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_PICTURES
+                )
+                val dir = File(picturesDir, "GeoSurvey")
+                if (!dir.exists()) {
+                    dir.mkdirs()
+                }
+                val file = File(dir, fileName)
+                val filePath = file.absolutePath
+
+                val baos = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
+                val bytes = baos.toByteArray()
+                baos.close()
+
+                val fos = FileOutputStream(filePath)
+                fos.write(bytes)
+                fos.flush()
+                fos.close()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun deletePhoto(photoId: Long) {

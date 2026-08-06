@@ -22,8 +22,8 @@ data class TrackingUiState(
 
 data class TrackSummary(
     val trackId: String,
-    val startTime: Date,
-    val endTime: Date?,
+    val startTime: Long,  // 改为 Long
+    val endTime: Long?,   // 改为 Long
     val pointCount: Int,
     val distance: Float = 0f
 )
@@ -62,8 +62,8 @@ class TrackingViewModel(application: Application) : AndroidViewModel(application
                 val summaries = mutableListOf<TrackSummary>()
                 for (id in trackIds) {
                     val count = database.trackPointDao().getPointCount(id)
-                    val startTime = database.trackPointDao().getStartTime(id)
-                    val endTime = database.trackPointDao().getEndTime(id)
+                    val startTime = database.trackPointDao().getStartTimeMillis(id)
+                    val endTime = database.trackPointDao().getEndTimeMillis(id)
                     if (startTime != null && count > 0) {
                         summaries.add(
                             TrackSummary(

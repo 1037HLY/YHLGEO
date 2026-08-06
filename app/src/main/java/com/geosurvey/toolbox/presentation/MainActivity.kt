@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
 import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
+import com.geosurvey.toolbox.presentation.ui.screens.MapScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingViewModel
@@ -94,6 +95,7 @@ class MainActivity : ComponentActivity() {
                     var timeText by remember { mutableStateOf("--:--:--") }
                     var showDialog by remember { mutableStateOf(false) }
                     var showTrackList by remember { mutableStateOf(false) }
+                    var showMap by remember { mutableStateOf(false) }
 
                     LaunchedEffect(hasPermission) {
                         if (hasPermission) {
@@ -114,11 +116,32 @@ class MainActivity : ComponentActivity() {
                     val trackingViewModel: TrackingViewModel = viewModel()
                     val trackingState by trackingViewModel.uiState.collectAsState()
 
-                    if (showTrackList) {
+                    // 页面切换
+                    if (showMap) {
+                        // 获取选中的轨迹点
+                        val selectedTrackId = trackingState.trackList.firstOrNull()?.trackId
+                        val trackPoints = if (selectedTrackId != null) {
+                            remember(selectedTrackId) {
+                                // 从数据库加载轨迹点
+                                emptyList()
+                            }
+                        } else {
+                            emptyList()
+                        }
+                        MapScreen(
+                            trackPoints = trackPoints,
+                            currentLocation = location,
+                            onBack = { showMap = false },
+                            onCenterLocation = {
+                                // 定位到当前位置
+                            }
+                        )
+                    } else if (showTrackList) {
                         TrackListScreen(
                             tracks = trackingState.trackList,
                             onTrackClick = { trackId ->
-                                // TODO: 查看轨迹详情（阶段5实现）
+                                // 点击轨迹跳转到地图
+                                showMap = true
                             },
                             onDeleteTrack = { trackId ->
                                 trackingViewModel.deleteTrack(trackId)
@@ -150,6 +173,9 @@ class MainActivity : ComponentActivity() {
                             onViewTracks = {
                                 trackingViewModel.loadAllTracks()
                                 showTrackList = true
+                            },
+                            onMapClick = {
+                                showMap = true
                             }
                         )
                     }
@@ -184,7 +210,8 @@ fun MainScreen(
     trackingState: TrackingUiState,
     onStartTracking: () -> Unit,
     onStopTracking: () -> Unit,
-    onViewTracks: () -> Unit
+    onViewTracks: () -> Unit,
+    onMapClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -335,6 +362,46 @@ fun MainScreen(
             onStopClick = onStopTracking,
             onViewTracksClick = onViewTracks
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 地图卡片
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onMapClick() },
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFE8F0FE).copy(alpha = 0.6f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "🗺️ 轨迹地图",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF0EA5E9)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "查看轨迹路线和当前位置",
+                    fontSize = 14.sp,
+                    color = Color(0xFF475569)
+                )
+                if (trackingState.trackList.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "📋 已有 ${trackingState.trackList.size} 条轨迹",
+                        fontSize = 12.sp,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

@@ -70,7 +70,7 @@ fun SampleScreen(
             selectedTabIndex = selectedTab,
             containerColor = Color(0xFFF1F5F9),
             indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
+                TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                     height = 3.dp,
                     color = Color(0xFF0EA5E9)
@@ -120,7 +120,6 @@ fun SampleScreen(
             onDismiss = { showExportDialog = false },
             onExport = { type ->
                 val data = viewModel.exportSamples(type)
-                // 保存到文件
                 val fileName = "samples_${System.currentTimeMillis()}.csv"
                 try {
                     context.openFileOutput(fileName, Context.MODE_PRIVATE).use {
@@ -233,7 +232,6 @@ fun SampleItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* 点击查看详情 */ }
             .clickable { onLongClick() },
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFF8FAFC).copy(alpha = 0.9f)

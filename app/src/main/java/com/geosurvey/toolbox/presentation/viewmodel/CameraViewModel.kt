@@ -108,15 +108,16 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
                 val fileName = "geo_${System.currentTimeMillis()}.jpg"
                 val file = File(getApplication().filesDir, fileName)
+                val filePath = file.absolutePath
 
-                // 使用 ByteArrayOutputStream 中转，避免 FileOutputStream 类型推断问题
+                // 使用 ByteArrayOutputStream 中转
                 val byteArrayOutputStream = ByteArrayOutputStream()
                 watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
                 val bytes = byteArrayOutputStream.toByteArray()
                 byteArrayOutputStream.close()
 
-                // 写入文件
-                val fileOutputStream = FileOutputStream(file)
+                // 使用绝对路径字符串构造 FileOutputStream，避免重载歧义
+                val fileOutputStream = FileOutputStream(filePath)
                 fileOutputStream.write(bytes)
                 fileOutputStream.flush()
                 fileOutputStream.close()
@@ -267,7 +268,6 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 if (uri != null) {
                     val outputStream = context.contentResolver.openOutputStream(uri)
                     if (outputStream != null) {
-                        // 使用 ByteArrayOutputStream 中转
                         val byteArrayOutputStream = ByteArrayOutputStream()
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
                         val bytes = byteArrayOutputStream.toByteArray()
@@ -288,13 +288,15 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     dir.mkdirs()
                 }
                 val file = File(dir, fileName)
-                // 使用 ByteArrayOutputStream 中转
+                val filePath = file.absolutePath
+
                 val byteArrayOutputStream = ByteArrayOutputStream()
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
                 val bytes = byteArrayOutputStream.toByteArray()
                 byteArrayOutputStream.close()
 
-                val fileOutputStream = FileOutputStream(file)
+                // 使用绝对路径字符串构造 FileOutputStream
+                val fileOutputStream = FileOutputStream(filePath)
                 fileOutputStream.write(bytes)
                 fileOutputStream.flush()
                 fileOutputStream.close()

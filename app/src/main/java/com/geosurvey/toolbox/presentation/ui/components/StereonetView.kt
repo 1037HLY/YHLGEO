@@ -7,6 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import com.geosurvey.toolbox.data.database.AttitudeEntity
 import kotlin.math.*
@@ -26,7 +28,7 @@ fun StereonetView(
             val centerY = size.height / 2
             val radius = min(size.width, size.height) / 2 - 20
 
-            // 绘制外圈（赤平投影网）
+            // 绘制外圈
             drawCircle(
                 color = Color(0xFF475569).copy(alpha = 0.3f),
                 radius = radius,
@@ -48,7 +50,7 @@ fun StereonetView(
                 strokeWidth = 0.5f
             )
 
-            // 绘制内圈（30°, 60°）
+            // 绘制内圈
             listOf(0.3f, 0.6f).forEach { scale ->
                 drawCircle(
                     color = Color(0xFF475569).copy(alpha = 0.15f),
@@ -63,7 +65,6 @@ fun StereonetView(
                 val strikeRad = Math.toRadians(attitude.strike.toDouble())
                 val dipRad = Math.toRadians(attitude.dip.toDouble())
 
-                // 赤平投影计算
                 val distance = radius * (1 - sin(dipRad))
                 val x = centerX + distance * cos(strikeRad)
                 val y = centerY - distance * sin(strikeRad)
@@ -81,18 +82,18 @@ fun StereonetView(
                 )
             }
 
-            // 标注方向
-            drawContext.canvas.nativeCanvas.apply {
+            // 标注方向 - 使用 drawIntoCanvas
+            drawIntoCanvas { canvas ->
                 val paint = android.graphics.Paint().apply {
                     color = android.graphics.Color.parseColor("#475569")
                     textSize = 28f
                     isAntiAlias = true
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
-                drawText("N", centerX.toFloat(), (centerY - radius - 10).toFloat(), paint)
-                drawText("S", centerX.toFloat(), (centerY + radius + 30).toFloat(), paint)
-                drawText("E", (centerX + radius + 20).toFloat(), centerY.toFloat() + 10, paint)
-                drawText("W", (centerX - radius - 20).toFloat(), centerY.toFloat() + 10, paint)
+                canvas.nativeCanvas.drawText("N", centerX.toFloat(), (centerY - radius - 10).toFloat(), paint)
+                canvas.nativeCanvas.drawText("S", centerX.toFloat(), (centerY + radius + 30).toFloat(), paint)
+                canvas.nativeCanvas.drawText("E", (centerX + radius + 20).toFloat(), centerY.toFloat() + 10, paint)
+                canvas.nativeCanvas.drawText("W", (centerX - radius - 20).toFloat(), centerY.toFloat() + 10, paint)
             }
         }
     }

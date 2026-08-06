@@ -1,5 +1,6 @@
 package com.geosurvey.toolbox.presentation.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,8 +32,8 @@ fun AnalysisScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
             .background(Color(0xFFF8FAFC))
+            .padding(16.dp)
     ) {
         // 标题栏
         Row(
@@ -110,32 +111,23 @@ fun AnalysisScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Tab切换
-        TabRow(
+        ScrollableTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color(0xFFF1F5F9),
-            indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    height = 3.dp,
-                    color = Color(0xFF8B5CF6)
+            edgePadding = 0.dp
+        ) {
+            listOf("赤平投影", "玫瑰花图", "数据列表").forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTab == index,
+                    onClick = { selectedTab = index },
+                    text = { 
+                        Text(
+                            title, 
+                            color = if (selectedTab == index) Color(0xFF8B5CF6) else Color(0xFF475569)
+                        )
+                    }
                 )
             }
-        ) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = { Text("赤平投影", color = if (selectedTab == 0) Color(0xFF8B5CF6) else Color(0xFF475569)) }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = { Text("玫瑰花图", color = if (selectedTab == 1) Color(0xFF8B5CF6) else Color(0xFF475569)) }
-            )
-            Tab(
-                selected = selectedTab == 2,
-                onClick = { selectedTab = 2 },
-                text = { Text("数据列表", color = if (selectedTab == 2) Color(0xFF8B5CF6) else Color(0xFF475569)) }
-            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -143,7 +135,6 @@ fun AnalysisScreen(
         // 内容区域
         when (selectedTab) {
             0 -> {
-                // 赤平投影
                 if (uiState.selectedAttitudes.isNotEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -175,7 +166,6 @@ fun AnalysisScreen(
                 }
             }
             1 -> {
-                // 玫瑰花图
                 if (uiState.selectedAttitudes.isNotEmpty()) {
                     val strikes = uiState.selectedAttitudes.map { it.strike }
                     Box(
@@ -208,13 +198,25 @@ fun AnalysisScreen(
                 }
             }
             2 -> {
-                // 数据列表
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    items(uiState.selectedAttitudes) { attitude ->
-                        AttitudeListItem(attitude = attitude)
+                if (uiState.selectedAttitudes.isNotEmpty()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(uiState.selectedAttitudes) { attitude ->
+                            AttitudeListItem(attitude = attitude)
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "暂无数据",
+                            fontSize = 16.sp,
+                            color = Color(0xFF94A3B8)
+                        )
                     }
                 }
             }

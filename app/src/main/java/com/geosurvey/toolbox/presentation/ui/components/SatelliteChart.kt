@@ -89,7 +89,7 @@ fun SatelliteChart(
                     // 使用 drawIntoCanvas 绘制文字
                     drawIntoCanvas { canvas ->
                         val paint = android.graphics.Paint().apply {
-                            color = 0xFF475569.toInt()
+                            color = android.graphics.Color.parseColor("#475569")
                             textSize = 28f
                             isAntiAlias = true
                         }
@@ -113,7 +113,7 @@ fun SatelliteChart(
             // 绘制方向标记N
             drawIntoCanvas { canvas ->
                 val paint = android.graphics.Paint().apply {
-                    color = 0xFF0EA5E9.toInt()
+                    color = android.graphics.Color.parseColor("#0EA5E9")
                     textSize = 36f
                     isAntiAlias = true
                     textAlign = android.graphics.Paint.Align.CENTER

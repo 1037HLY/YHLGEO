@@ -6,14 +6,22 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [TrackPointEntity::class, AttitudeEntity::class, PhotoEntity::class],
-    version = 4,
+    entities = [
+        TrackPointEntity::class,
+        AttitudeEntity::class,
+        PhotoEntity::class,
+        SampleEntity::class,
+        DrillSampleEntity::class
+    ],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun trackPointDao(): TrackPointDao
     abstract fun attitudeDao(): AttitudeDao
     abstract fun photoDao(): PhotoDao
+    abstract fun sampleDao(): SampleDao
+    abstract fun drillSampleDao(): DrillSampleDao
 
     companion object {
         @Volatile

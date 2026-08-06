@@ -2,6 +2,7 @@ package com.geosurvey.toolbox.presentation.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,9 +31,9 @@ fun AttitudeScreen(
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
-    // 检查权限
+    // 检查定位权限
     val hasLocationPermission = ContextCompat.checkSelfPermission(
         context,
         Manifest.permission.ACCESS_FINE_LOCATION
@@ -40,8 +42,8 @@ fun AttitudeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
             .background(Color(0xFFF8FAFC))
+            .padding(16.dp)
     ) {
         // 标题栏
         Row(
@@ -90,11 +92,12 @@ fun AttitudeScreen(
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 走向
+                // 走向、倾角、倾向三列
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
+                    // 走向
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "走向",
@@ -109,6 +112,7 @@ fun AttitudeScreen(
                         )
                     }
 
+                    // 倾角
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "倾角",
@@ -123,6 +127,7 @@ fun AttitudeScreen(
                         )
                     }
 
+                    // 倾向
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "倾向",
@@ -137,20 +142,29 @@ fun AttitudeScreen(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 测量提示
+                Text(
+                    text = "📱 将手机背面贴合岩面进行测量",
+                    fontSize = 13.sp,
+                    color = Color(0xFF94A3B8)
+                )
+
+                // 精度指示
+                if (uiState.accuracy > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "精度: ${uiState.accuracy}%",
+                        fontSize = 12.sp,
+                        color = if (uiState.accuracy > 80) Color(0xFF10B981) else Color(0xFFF59E0B)
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 测量提示
-        Text(
-            text = "📱 将手机背面贴合岩面进行测量",
-            fontSize = 13.sp,
-            color = Color(0xFF94A3B8),
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // 备注输入
         OutlinedTextField(
@@ -159,7 +173,11 @@ fun AttitudeScreen(
             label = { Text("📝 备注") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = false,
-            maxLines = 2
+            maxLines = 2,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF8B5CF6),
+                unfocusedBorderColor = Color(0xFFD1D5DB)
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -195,7 +213,7 @@ fun AttitudeScreen(
                     )
                 } else {
                     Text(
-                        text = if (hasLocationPermission) "等待定位..." else "请授予定位权限",
+                        text = if (hasLocationPermission) "⏳ 等待定位..." else "⚠️ 请授予定位权限",
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8)
                     )
@@ -203,7 +221,7 @@ fun AttitudeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // 记录按钮
         Button(
@@ -211,16 +229,19 @@ fun AttitudeScreen(
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF8B5CF6)
             ),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp)
         ) {
             Text(
                 text = "📝 记录产状",
                 fontSize = 16.sp,
-                modifier = Modifier.padding(8.dp)
+                fontWeight = FontWeight.SemiBold
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // 历史记录标题
         Row(
@@ -235,25 +256,39 @@ fun AttitudeScreen(
                 color = Color(0xFF0F172A)
             )
             TextButton(
-                onClick = { viewModel.loadHistory() },
-                modifier = Modifier
+                onClick = { viewModel.loadHistory() }
             ) {
-                Text("刷新", fontSize = 12.sp)
+                Text("刷新", fontSize = 12.sp, color = Color(0xFF8B5CF6))
             }
         }
 
         Spacer(modifier = Modifier.height(4.dp))
 
         // 历史记录列表
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            items(uiState.history) { record ->
-                AttitudeHistoryItem(
-                    record = record,
-                    onDelete = { viewModel.deleteAttitude(record.id) }
+        if (uiState.history.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "暂无产状记录\n\n将手机贴合岩面测量并记录",
+                    fontSize = 14.sp,
+                    color = Color(0xFF94A3B8)
                 )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(uiState.history) { record ->
+                    AttitudeHistoryItem(
+                        record = record,
+                        onDelete = { viewModel.deleteAttitude(record.id) }
+                    )
+                }
             }
         }
     }
@@ -269,7 +304,8 @@ fun AttitudeHistoryItem(
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFF8FAFC).copy(alpha = 0.8f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
@@ -281,6 +317,7 @@ fun AttitudeHistoryItem(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
+                // 产状数值行
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -301,11 +338,17 @@ fun AttitudeHistoryItem(
                         color = Color(0xFF475569)
                     )
                 }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // 坐标
                 Text(
                     text = "📍 %.5f, %.5f".format(record.latitude, record.longitude),
                     fontSize = 11.sp,
                     color = Color(0xFF94A3B8)
                 )
+
+                // 备注
                 if (record.note.isNotEmpty()) {
                     Text(
                         text = "📝 ${record.note}",
@@ -313,13 +356,20 @@ fun AttitudeHistoryItem(
                         color = Color(0xFF8B5CF6)
                     )
                 }
+
+                // 时间
                 Text(
                     text = "🕐 ${SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(record.timestamp))}",
                     fontSize = 11.sp,
                     color = Color(0xFF94A3B8)
                 )
             }
-            IconButton(onClick = onDelete) {
+
+            // 删除按钮
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(36.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "删除",

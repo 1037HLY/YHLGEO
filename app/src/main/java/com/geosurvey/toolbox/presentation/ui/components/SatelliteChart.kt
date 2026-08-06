@@ -2,17 +2,12 @@ package com.geosurvey.toolbox.presentation.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.geosurvey.toolbox.presentation.SatelliteDetail
 import kotlin.math.*
 
@@ -89,10 +84,10 @@ fun SatelliteChart(
                         center = Offset(x, y)
                     )
 
-                    // 绘制卫星编号（使用drawContext.canvas.nativeCanvas）
+                    // 绘制卫星编号 - 使用Int颜色值
                     drawContext.canvas.nativeCanvas.apply {
                         val paint = android.graphics.Paint().apply {
-                            color = android.graphics.Color.parseColor("#475569")
+                            color = 0xFF475569.toInt()
                             textSize = 28f
                             isAntiAlias = true
                         }
@@ -108,10 +103,10 @@ fun SatelliteChart(
                 center = Offset(centerX, centerY)
             )
 
-            // 绘制方向标记N
+            // 绘制方向标记N - 使用Int颜色值
             drawContext.canvas.nativeCanvas.apply {
                 val paint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.parseColor("#0EA5E9")
+                    color = 0xFF0EA5E9.toInt()
                     textSize = 36f
                     isAntiAlias = true
                     textAlign = android.graphics.Paint.Align.CENTER

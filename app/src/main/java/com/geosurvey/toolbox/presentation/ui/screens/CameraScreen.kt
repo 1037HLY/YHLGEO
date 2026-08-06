@@ -45,6 +45,7 @@ fun CameraScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showWatermarkSettings by remember { mutableStateOf(false) }
     var previewPhotoPath by remember { mutableStateOf<String?>(null) }
+    var capturedBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     val context = LocalContext.current
 
     // 相机启动器
@@ -55,6 +56,7 @@ fun CameraScreen(
             previewPhotoPath?.let { path ->
                 val bitmap = BitmapFactory.decodeFile(path)
                 if (bitmap != null) {
+                    capturedBitmap = bitmap
                     viewModel.savePhotoWithWatermark(bitmap)
                 }
             }
@@ -115,31 +117,48 @@ fun CameraScreen(
             }
         }
 
-        // 拍照预览区
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 相机预览窗口
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp),
+                .height(220.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFE8F0FE).copy(alpha = 0.7f)
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                if (uiState.lastPhotoPath != null) {
-                    val bitmap = runCatching {
+                // 显示最新拍摄的照片
+                val displayBitmap = if (uiState.lastPhotoPath != null) {
+                    runCatching {
                         BitmapFactory.decodeFile(uiState.lastPhotoPath)
                     }.getOrNull()
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap.asImageBitmap(),
-                            contentDescription = "最近照片",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                } else {
+                    capturedBitmap
+                }
+
+                if (displayBitmap != null) {
+                    Image(
+                        bitmap = displayBitmap.asImageBitmap(),
+                        contentDescription = "拍摄的照片",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    // 预览提示
+                    Text(
+                        text = "📷 点击下方按钮重新拍摄",
+                        fontSize = 12.sp,
+                        color = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
                 } else {
                     Text(
                         text = "📷 点击下方按钮拍照",
@@ -184,13 +203,14 @@ fun CameraScreen(
             }
         }
 
-        // 产状输入区
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 产状输入区（修复字体颜色）
         if (uiState.watermarkConfig.showAttitude) {
-            Spacer(modifier = Modifier.height(8.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFF5F3FF).copy(alpha = 0.6f)
+                    containerColor = Color(0xFFF5F3FF).copy(alpha = 0.8f)
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -201,7 +221,7 @@ fun CameraScreen(
                         text = "📐 产状信息",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF8B5CF6)
+                        color = Color(0xFF5B21B6)  // 深紫色，更清晰
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
@@ -213,9 +233,13 @@ fun CameraScreen(
                                 val value = it.toFloatOrNull()
                                 viewModel.updateAttitude(value, uiState.dip, uiState.dipDirection)
                             },
-                            label = { Text("走向 (°)") },
+                            label = { Text("走向 (°)", color = Color(0xFF374151)) },
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF1F2937),
+                                unfocusedTextColor = Color(0xFF1F2937)
+                            )
                         )
                         OutlinedTextField(
                             value = uiState.dip?.toString() ?: "",
@@ -223,9 +247,13 @@ fun CameraScreen(
                                 val value = it.toFloatOrNull()
                                 viewModel.updateAttitude(uiState.strike, value, uiState.dipDirection)
                             },
-                            label = { Text("倾角 (°)") },
+                            label = { Text("倾角 (°)", color = Color(0xFF374151)) },
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF1F2937),
+                                unfocusedTextColor = Color(0xFF1F2937)
+                            )
                         )
                         OutlinedTextField(
                             value = uiState.dipDirection?.toString() ?: "",
@@ -233,27 +261,37 @@ fun CameraScreen(
                                 val value = it.toFloatOrNull()
                                 viewModel.updateAttitude(uiState.strike, uiState.dip, value)
                             },
-                            label = { Text("倾向 (°)") },
+                            label = { Text("倾向 (°)", color = Color(0xFF374151)) },
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF1F2937),
+                                unfocusedTextColor = Color(0xFF1F2937)
+                            )
                         )
                     }
                 }
             }
         }
 
-        // 备注输入
+        // 备注输入（修复字体颜色）
         if (uiState.watermarkConfig.showNote) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             OutlinedTextField(
                 value = uiState.note,
                 onValueChange = { viewModel.updateNote(it) },
-                label = { Text("📝 备注") },
+                label = { Text("📝 备注", color = Color(0xFF374151)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = false,
-                maxLines = 2
+                maxLines = 2,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color(0xFF1F2937),
+                    unfocusedTextColor = Color(0xFF1F2937)
+                )
             )
         }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         // 水印设置弹窗
         if (showWatermarkSettings) {
@@ -264,29 +302,57 @@ fun CameraScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
         // 历史照片列表
-        Text(
-            text = "📋 历史照片 (${uiState.photoList.size})",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF0F172A)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "📋 历史照片 (${uiState.photoList.size})",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF0F172A)
+            )
+            TextButton(
+                onClick = { viewModel.loadPhotos() }
+            ) {
+                Text("刷新", fontSize = 12.sp, color = Color(0xFF0EA5E9))
+            }
+        }
+
         Spacer(modifier = Modifier.height(4.dp))
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(uiState.photoList) { photo ->
-                PhotoHistoryItem(
-                    photo = photo,
-                    onView = {
-                        // 查看照片
-                    },
-                    onDelete = { viewModel.deletePhoto(photo.id) }
+        if (uiState.photoList.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .background(Color(0xFFF1F5F9), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "暂无照片，点击上方按钮拍摄",
+                    fontSize = 14.sp,
+                    color = Color(0xFF94A3B8)
                 )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(uiState.photoList) { photo ->
+                    PhotoHistoryItem(
+                        photo = photo,
+                        onView = {
+                            // 查看照片
+                        },
+                        onDelete = { viewModel.deletePhoto(photo.id) }
+                    )
+                }
             }
         }
     }
@@ -301,42 +367,42 @@ fun WatermarkSettingsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("⚙️ 水印设置") },
+        title = { Text("⚙️ 水印设置", color = Color(0xFF0F172A)) },
         text = {
             Column {
-                Text("显示内容", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Row {
+                Text("显示内容", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = config.showCoordinates,
                         onCheckedChange = { onConfigChange(config.copy(showCoordinates = it)) }
                     )
-                    Text("坐标")
+                    Text("坐标", color = Color(0xFF1F2937))
                 }
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = config.showTime,
                         onCheckedChange = { onConfigChange(config.copy(showTime = it)) }
                     )
-                    Text("时间")
+                    Text("时间", color = Color(0xFF1F2937))
                 }
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = config.showAttitude,
                         onCheckedChange = { onConfigChange(config.copy(showAttitude = it)) }
                     )
-                    Text("产状")
+                    Text("产状", color = Color(0xFF1F2937))
                 }
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = config.showNote,
                         onCheckedChange = { onConfigChange(config.copy(showNote = it)) }
                     )
-                    Text("备注")
+                    Text("备注", color = Color(0xFF1F2937))
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("字体大小: ${config.fontSize.toInt()}px", fontSize = 14.sp)
+                Text("字体大小: ${config.fontSize.toInt()}px", fontSize = 14.sp, color = Color(0xFF0F172A))
                 Slider(
                     value = config.fontSize,
                     onValueChange = { onConfigChange(config.copy(fontSize = it)) },
@@ -346,13 +412,13 @@ fun WatermarkSettingsDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("位置", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("位置", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
                 Row {
                     WatermarkPosition.values().forEach { pos ->
                         FilterChip(
                             selected = config.position == pos,
                             onClick = { onConfigChange(config.copy(position = pos)) },
-                            label = { Text(pos.name.replace("_", " ")) },
+                            label = { Text(pos.name.replace("_", " "), fontSize = 10.sp) },
                             modifier = Modifier.padding(2.dp)
                         )
                     }
@@ -360,7 +426,7 @@ fun WatermarkSettingsDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("透明度: ${(config.opacity * 100).toInt()}%", fontSize = 14.sp)
+                Text("透明度: ${(config.opacity * 100).toInt()}%", fontSize = 14.sp, color = Color(0xFF0F172A))
                 Slider(
                     value = config.opacity,
                     onValueChange = { onConfigChange(config.copy(opacity = it)) },
@@ -371,7 +437,7 @@ fun WatermarkSettingsDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("完成")
+                Text("完成", color = Color(0xFF0EA5E9))
             }
         }
     )
@@ -387,58 +453,99 @@ fun PhotoHistoryItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF8FAFC).copy(alpha = 0.8f)
+            containerColor = Color(0xFFF8FAFC).copy(alpha = 0.9f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 缩略图
+            val thumbnail = runCatching {
+                BitmapFactory.decodeFile(photo.imagePath)?.let {
+                    android.graphics.Bitmap.createScaledBitmap(it, 80, 80, true)
+                }
+            }.getOrNull()
+
+            if (thumbnail != null) {
+                Image(
+                    bitmap = thumbnail.asImageBitmap(),
+                    contentDescription = "缩略图",
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(Color(0xFFE5E7EB), RoundedCornerShape(4.dp))
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(Color(0xFFE5E7EB), RoundedCornerShape(4.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("📷", fontSize = 24.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // 照片信息
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = "📍 %.6f, %.6f".format(photo.latitude, photo.longitude),
-                    fontSize = 13.sp,
-                    color = Color(0xFF0F172A)
+                    fontSize = 12.sp,
+                    color = Color(0xFF0F172A),
+                    fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "🕐 ${SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(photo.timestamp))}",
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = Color(0xFF475569)
                 )
                 if (photo.strike != null && photo.dip != null) {
                     Text(
                         text = "📐 走向: %.1f° 倾角: %.1f°".format(photo.strike!!, photo.dip!!),
-                        fontSize = 12.sp,
-                        color = Color(0xFF8B5CF6)
+                        fontSize = 11.sp,
+                        color = Color(0xFF7C3AED)
                     )
                 }
                 if (!photo.note.isNullOrEmpty()) {
                     Text(
                         text = "📝 ${photo.note}",
-                        fontSize = 12.sp,
-                        color = Color(0xFF475569)
+                        fontSize = 11.sp,
+                        color = Color(0xFF475569),
+                        maxLines = 1
                     )
                 }
             }
+
             Row {
-                IconButton(onClick = onView) {
+                IconButton(
+                    onClick = onView,
+                    modifier = Modifier.size(32.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Visibility,
                         contentDescription = "查看",
-                        tint = Color(0xFF0EA5E9)
+                        tint = Color(0xFF0EA5E9),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
-                IconButton(onClick = onDelete) {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "删除",
-                        tint = Color(0xFFEF4444)
+                        tint = Color(0xFFEF4444),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

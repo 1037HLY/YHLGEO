@@ -95,10 +95,6 @@ dependencies {
     // Location & GNSS
     implementation("com.google.android.gms:play-services-location:21.0.1")
 
-    // Maps
-    implementation("com.google.maps.android:maps-compose:4.3.0")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
 
@@ -107,6 +103,11 @@ dependencies {
 
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // osmdroid - OpenStreetMap
+    implementation("org.osmdroid:osmdroid-android:6.1.17")
+    implementation("org.osmdroid:osmdroid-mapsforge:6.1.17")
+    implementation("org.osmdroid:osmdroid-geopackage:6.1.17")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

@@ -145,19 +145,22 @@ class MainActivity : ComponentActivity() {
                         // 获取选中的轨迹ID - 使用第一个有数据的轨迹
                         val trackIds = trackingState.trackList.map { it.trackId }
                         val selectedTrackId = trackIds.firstOrNull()
-                        val trackPoints = if (selectedTrackId != null) {
-                            remember(selectedTrackId) {
+                        var trackPoints by remember { mutableStateOf(emptyList<TrackPointEntity>()) }
+                        
+                        // 使用 LaunchedEffect 加载轨迹点
+                        LaunchedEffect(selectedTrackId) {
+                            if (selectedTrackId != null) {
                                 try {
-                                    val points = trackingViewModel.getTrackPoints(selectedTrackId)
-                                    points
+                                    trackPoints = trackingViewModel.getTrackPoints(selectedTrackId)
                                 } catch (e: Exception) {
                                     e.printStackTrace()
-                                    emptyList<TrackPointEntity>()
+                                    trackPoints = emptyList()
                                 }
+                            } else {
+                                trackPoints = emptyList()
                             }
-                        } else {
-                            emptyList<TrackPointEntity>()
                         }
+                        
                         MapScreen(
                             trackPoints = trackPoints,
                             currentLocation = location,

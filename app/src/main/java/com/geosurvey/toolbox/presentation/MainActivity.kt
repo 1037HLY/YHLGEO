@@ -25,7 +25,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
 import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
+import com.geosurvey.toolbox.presentation.ui.screens.CameraScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
+import com.geosurvey.toolbox.presentation.viewmodel.CameraViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -46,9 +48,6 @@ class MainActivity : ComponentActivity() {
         trackingReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action == "com.geosurvey.toolbox.TRACKING_STATUS") {
-                    val isRecording = intent.getBooleanExtra("isRecording", false)
-                    val trackId = intent.getStringExtra("trackId") ?: ""
-                    val pointCount = intent.getIntExtra("pointCount", 0)
                     // 状态会通过ViewModel更新
                 }
             }
@@ -68,7 +67,8 @@ class MainActivity : ComponentActivity() {
                             Manifest.permission.ACCESS_FINE_LOCATION,
                             Manifest.permission.ACCESS_COARSE_LOCATION,
                             Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-                            Manifest.permission.POST_NOTIFICATIONS
+                            Manifest.permission.POST_NOTIFICATIONS,
+                            Manifest.permission.CAMERA
                         )
                     )
 
@@ -98,6 +98,7 @@ class MainActivity : ComponentActivity() {
                     var timeText by remember { mutableStateOf("--:--:--") }
                     var showDialog by remember { mutableStateOf(false) }
                     var showTrackList by remember { mutableStateOf(false) }
+                    var showCamera by remember { mutableStateOf(false) }
 
                     // 监听GPS数据
                     LaunchedEffect(hasPermission) {
@@ -120,8 +121,22 @@ class MainActivity : ComponentActivity() {
                     val trackingViewModel: TrackingViewModel = viewModel()
                     val trackingState by trackingViewModel.uiState.collectAsState()
 
+                    // 相机ViewModel
+                    val cameraViewModel: CameraViewModel = viewModel()
+                    // 传递当前定位数据到相机
+                    LaunchedEffect(location) {
+                        location?.let {
+                            cameraViewModel.updateLocation(it)
+                        }
+                    }
+
                     // 页面切换
-                    if (showTrackList) {
+                    if (showCamera) {
+                        CameraScreen(
+                            viewModel = cameraViewModel,
+                            onBack = { showCamera = false }
+                        )
+                    } else if (showTrackList) {
                         TrackListScreen(
                             tracks = trackingState.trackList,
                             onTrackClick = { trackId ->
@@ -142,21 +157,24 @@ class MainActivity : ComponentActivity() {
                             isSearching = isSearching,
                             gnssData = gnssData,
                             timeText = timeText,
-                            onCardClick = { 
+                            onCardClick = {
                                 if (!isSearching && location != null) {
                                     showDialog = true
                                 }
                             },
                             trackingState = trackingState,
-                            onStartTracking = { 
-                                trackingViewModel.startRecording() 
+                            onStartTracking = {
+                                trackingViewModel.startRecording()
                             },
-                            onStopTracking = { 
-                                trackingViewModel.stopRecording() 
+                            onStopTracking = {
+                                trackingViewModel.stopRecording()
                             },
-                            onViewTracks = { 
+                            onViewTracks = {
                                 trackingViewModel.loadAllTracks()
-                                showTrackList = true 
+                                showTrackList = true
+                            },
+                            onCameraClick = {
+                                showCamera = true
                             }
                         )
                     }
@@ -191,7 +209,8 @@ fun MainScreen(
     trackingState: com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState,
     onStartTracking: () -> Unit,
     onStopTracking: () -> Unit,
-    onViewTracks: () -> Unit
+    onViewTracks: () -> Unit,
+    onCameraClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -367,6 +386,38 @@ fun MainScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "阶段6开发中",
+                    fontSize = 14.sp,
+                    color = Color(0xFF475569)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 水印相机卡片
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCameraClick() },
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFFFF3E0).copy(alpha = 0.6f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "📷 水印相机",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFF59E0B)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "拍照并叠加坐标/时间/产状水印",
                     fontSize = 14.sp,
                     color = Color(0xFF475569)
                 )

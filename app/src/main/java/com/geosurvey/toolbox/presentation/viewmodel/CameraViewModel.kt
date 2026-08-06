@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -107,12 +108,18 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
                 val fileName = "geo_${System.currentTimeMillis()}.jpg"
                 val file = File(getApplication().filesDir, fileName)
-                
-                // 使用 ByteArray 方式保存，避免 FileOutputStream 类型推断问题
-                val outputStream = FileOutputStream(file)
-                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-                outputStream.flush()
-                outputStream.close()
+
+                // 使用 ByteArrayOutputStream 中转，避免 FileOutputStream 类型推断问题
+                val byteArrayOutputStream = ByteArrayOutputStream()
+                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
+                val bytes = byteArrayOutputStream.toByteArray()
+                byteArrayOutputStream.close()
+
+                // 写入文件
+                val fileOutputStream = FileOutputStream(file)
+                fileOutputStream.write(bytes)
+                fileOutputStream.flush()
+                fileOutputStream.close()
 
                 // 保存到相册
                 saveToGallery(watermarkedBitmap, fileName)
@@ -260,7 +267,13 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 if (uri != null) {
                     val outputStream = context.contentResolver.openOutputStream(uri)
                     if (outputStream != null) {
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                        // 使用 ByteArrayOutputStream 中转
+                        val byteArrayOutputStream = ByteArrayOutputStream()
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
+                        val bytes = byteArrayOutputStream.toByteArray()
+                        byteArrayOutputStream.close()
+
+                        outputStream.write(bytes)
                         outputStream.flush()
                         outputStream.close()
                     }
@@ -275,10 +288,16 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     dir.mkdirs()
                 }
                 val file = File(dir, fileName)
-                val outputStream = FileOutputStream(file)
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-                outputStream.flush()
-                outputStream.close()
+                // 使用 ByteArrayOutputStream 中转
+                val byteArrayOutputStream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, byteArrayOutputStream)
+                val bytes = byteArrayOutputStream.toByteArray()
+                byteArrayOutputStream.close()
+
+                val fileOutputStream = FileOutputStream(file)
+                fileOutputStream.write(bytes)
+                fileOutputStream.flush()
+                fileOutputStream.close()
             }
         } catch (e: Exception) {
             e.printStackTrace()

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
+import java.util.Date
 
 @Dao
 interface TrackPointDao {
@@ -22,15 +23,16 @@ interface TrackPointDao {
     @Query("SELECT COUNT(*) FROM track_points WHERE trackId = :trackId")
     suspend fun getPointCount(trackId: String): Int
 
+    // 使用 Long 类型存储时间戳
     @Query("SELECT MIN(timestamp) FROM track_points WHERE trackId = :trackId")
-    suspend fun getStartTime(trackId: String): Date?
+    suspend fun getStartTimeMillis(trackId: String): Long?
 
     @Query("SELECT MAX(timestamp) FROM track_points WHERE trackId = :trackId")
-    suspend fun getEndTime(trackId: String): Date?
+    suspend fun getEndTimeMillis(trackId: String): Long?
 
     @Query("DELETE FROM track_points WHERE trackId = :trackId")
     suspend fun deleteTrack(trackId: String)
 
-    @Query("DELETE FROM track_points WHERE timestamp < :beforeDate")
-    suspend fun deleteOldTracks(beforeDate: Date)
+    @Query("DELETE FROM track_points WHERE timestamp < :beforeDateMillis")
+    suspend fun deleteOldTracks(beforeDateMillis: Long)
 }

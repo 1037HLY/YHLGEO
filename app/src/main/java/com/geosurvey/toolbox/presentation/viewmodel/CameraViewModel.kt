@@ -1,6 +1,7 @@
 package com.geosurvey.toolbox.presentation.viewmodel
 
 import android.app.Application
+import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -105,25 +105,19 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 val watermarkedBitmap = addWatermark(originalBitmap, watermarkText, config)
 
                 val fileName = "geo_${System.currentTimeMillis()}.jpg"
-                val file = File(getApplication().filesDir, fileName)
-                val filePath = file.absolutePath
 
-                // 保存到应用私有目录
+                // 使用 ByteArrayOutputStream 保存为 JPEG
                 val baos = ByteArrayOutputStream()
                 watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
-                val bytes = baos.toByteArray()
+                val imageData = baos.toByteArray()
                 baos.close()
 
-                val fos = FileOutputStream(filePath)
-                fos.write(bytes)
-                fos.flush()
-                fos.close()
+                // 保存到相册（通过 MediaStore）
+                val savedPath = saveToGallery(imageData, fileName)
 
-                // 保存到相册
-                saveToGallery(watermarkedBitmap, fileName)
-
+                // 保存到数据库
                 val photoEntity = PhotoEntity(
-                    imagePath = file.absolutePath,
+                    imagePath = savedPath ?: "",
                     latitude = state.currentLocation?.latitude ?: 0.0,
                     longitude = state.currentLocation?.longitude ?: 0.0,
                     altitude = state.currentLocation?.altitude ?: 0.0,
@@ -138,7 +132,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
                 _uiState.value = _uiState.value.copy(
                     isTakingPhoto = false,
-                    lastPhotoPath = file.absolutePath,
+                    lastPhotoPath = savedPath,
                     note = ""
                 )
                 loadPhotos()
@@ -245,11 +239,11 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         return resultBitmap
     }
 
-    private fun saveToGallery(bitmap: Bitmap, fileName: String) {
-        try {
+    private fun saveToGallery(imageData: ByteArray, fileName: String): String? {
+        return try {
             val context = getApplication()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val contentValues = android.content.ContentValues().apply {
+                val contentValues = ContentValues().apply {
                     put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
                     put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GeoSurvey")
@@ -258,18 +252,13 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     contentValues
                 )
-                if (uri != null) {
-                    val outputStream = context.contentResolver.openOutputStream(uri)
-                    if (outputStream != null) {
-                        val baos = ByteArrayOutputStream()
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
-                        val bytes = baos.toByteArray()
-                        baos.close()
-
-                        outputStream.write(bytes)
+                uri?.let {
+                    context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                        outputStream.write(imageData)
                         outputStream.flush()
-                        outputStream.close()
                     }
+                    // 返回真实路径（Android 10+ 返回 URI 的路径）
+                    it.toString()
                 }
             } else {
                 // Android 9及以下
@@ -281,20 +270,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     dir.mkdirs()
                 }
                 val file = File(dir, fileName)
-                val filePath = file.absolutePath
-
-                val baos = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)
-                val bytes = baos.toByteArray()
-                baos.close()
-
-                val fos = FileOutputStream(filePath)
-                fos.write(bytes)
-                fos.flush()
-                fos.close()
+                file.writeBytes(imageData)
+                file.absolutePath
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            null
         }
     }
 

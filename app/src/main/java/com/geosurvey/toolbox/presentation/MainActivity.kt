@@ -28,10 +28,13 @@ import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
 import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
 import com.geosurvey.toolbox.presentation.ui.screens.AnalysisScreen
 import com.geosurvey.toolbox.presentation.ui.screens.AttitudeScreen
+import com.geosurvey.toolbox.presentation.ui.screens.CameraPageScreen
 import com.geosurvey.toolbox.presentation.ui.screens.MapScreen
+import com.geosurvey.toolbox.presentation.ui.screens.SampleScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
 import com.geosurvey.toolbox.presentation.viewmodel.AnalysisViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.AttitudeViewModel
+import com.geosurvey.toolbox.presentation.viewmodel.SampleViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -103,6 +106,8 @@ class MainActivity : ComponentActivity() {
                     var showMap by remember { mutableStateOf(false) }
                     var showAttitude by remember { mutableStateOf(false) }
                     var showAnalysis by remember { mutableStateOf(false) }
+                    var showSample by remember { mutableStateOf(false) }
+                    var showCameraPage by remember { mutableStateOf(false) }
 
                     LaunchedEffect(hasPermission) {
                         if (hasPermission) {
@@ -124,7 +129,20 @@ class MainActivity : ComponentActivity() {
                     val trackingState by trackingViewModel.uiState.collectAsState()
 
                     // 页面切换
-                    if (showAnalysis) {
+                    if (showSample) {
+                        val sampleViewModel: SampleViewModel = viewModel()
+                        LaunchedEffect(location) {
+                            location?.let { sampleViewModel.updateLocation(it) }
+                        }
+                        SampleScreen(
+                            viewModel = sampleViewModel,
+                            onBack = { showSample = false }
+                        )
+                    } else if (showCameraPage) {
+                        CameraPageScreen(
+                            onBack = { showCameraPage = false }
+                        )
+                    } else if (showAnalysis) {
                         val analysisViewModel: AnalysisViewModel = viewModel()
                         AnalysisScreen(
                             viewModel = analysisViewModel,
@@ -214,6 +232,12 @@ class MainActivity : ComponentActivity() {
                             },
                             onAnalysisClick = {
                                 showAnalysis = true
+                            },
+                            onSampleClick = {
+                                showSample = true
+                            },
+                            onCameraPageClick = {
+                                showCameraPage = true
                             }
                         )
                     }
@@ -251,7 +275,9 @@ fun MainScreen(
     onViewTracks: () -> Unit,
     onMapClick: () -> Unit,
     onAttitudeClick: () -> Unit,
-    onAnalysisClick: () -> Unit
+    onAnalysisClick: () -> Unit,
+    onSampleClick: () -> Unit,
+    onCameraPageClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -509,9 +535,43 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 水印相机卡片（占位 - 待实现）
+        // 样本记录卡片
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onSampleClick() },
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFD1FAE5).copy(alpha = 0.6f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "📋 样本记录",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF059669)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "普通样本 · 钻孔样本 · 导出数据",
+                    fontSize = 14.sp,
+                    color = Color(0xFF475569)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 水印相机卡片
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCameraPageClick() },
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFFFF3E0).copy(alpha = 0.6f)
             ),
@@ -530,7 +590,7 @@ fun MainScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "拍照并叠加坐标/时间/产状水印 (开发中)",
+                    text = "拍照并叠加坐标/时间/产状水印",
                     fontSize = 14.sp,
                     color = Color(0xFF475569)
                 )

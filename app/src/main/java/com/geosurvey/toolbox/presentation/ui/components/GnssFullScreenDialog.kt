@@ -3,6 +3,8 @@ package com.geosurvey.toolbox.presentation.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -52,7 +54,7 @@ fun GnssFullScreenDialog(
                     )
                     IconButton(onClick = onDismiss) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                            imageVector = Icons.Default.Close,
                             contentDescription = "关闭",
                             tint = Color(0xFF475569)
                         )

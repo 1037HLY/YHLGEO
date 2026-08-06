@@ -6,12 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [TrackPointEntity::class],
-    version = 1,
+    entities = [TrackPointEntity::class, PhotoEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun trackPointDao(): TrackPointDao
+    abstract fun photoDao(): PhotoDao
 
     companion object {
         @Volatile

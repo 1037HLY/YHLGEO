@@ -107,13 +107,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
                 val fileName = "geo_${System.currentTimeMillis()}.jpg"
                 val file = File(getApplication().filesDir, fileName)
-                // 修复1：显式声明FileOutputStream类型
-                val fos = FileOutputStream(file)
-                try {
-                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
-                } finally {
-                    fos.close()
-                }
+                
+                // 使用 ByteArray 方式保存，避免 FileOutputStream 类型推断问题
+                val outputStream = FileOutputStream(file)
+                watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                outputStream.flush()
+                outputStream.close()
 
                 // 保存到相册
                 saveToGallery(watermarkedBitmap, fileName)
@@ -258,13 +257,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     contentValues
                 )
-                uri?.let { imageUri ->
-                    context.contentResolver.openOutputStream(imageUri)?.let { outputStream ->
-                        try {
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
-                        } finally {
-                            outputStream.close()
-                        }
+                if (uri != null) {
+                    val outputStream = context.contentResolver.openOutputStream(uri)
+                    if (outputStream != null) {
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                        outputStream.flush()
+                        outputStream.close()
                     }
                 }
             } else {
@@ -277,12 +275,10 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     dir.mkdirs()
                 }
                 val file = File(dir, fileName)
-                val fos = FileOutputStream(file)
-                try {
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
-                } finally {
-                    fos.close()
-                }
+                val outputStream = FileOutputStream(file)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                outputStream.flush()
+                outputStream.close()
             }
         } catch (e: Exception) {
             e.printStackTrace()

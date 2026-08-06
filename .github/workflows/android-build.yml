@@ -29,7 +29,11 @@ jobs:
     - name: Fix gradlew permissions
       run: chmod +x gradlew
 
-    - name: Build Debug APK (No signature needed)
+    # 添加 clean 步骤清除缓存
+    - name: Clean build
+      run: ./gradlew clean --no-daemon
+
+    - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
 
     - name: Upload Debug APK

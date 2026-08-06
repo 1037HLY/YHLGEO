@@ -26,8 +26,10 @@ import com.geosurvey.toolbox.data.database.TrackPointEntity
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
 import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
+import com.geosurvey.toolbox.presentation.ui.screens.AttitudeScreen
 import com.geosurvey.toolbox.presentation.ui.screens.MapScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
+import com.geosurvey.toolbox.presentation.viewmodel.AttitudeViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -97,6 +99,7 @@ class MainActivity : ComponentActivity() {
                     var showDialog by remember { mutableStateOf(false) }
                     var showTrackList by remember { mutableStateOf(false) }
                     var showMap by remember { mutableStateOf(false) }
+                    var showAttitude by remember { mutableStateOf(false) }
 
                     LaunchedEffect(hasPermission) {
                         if (hasPermission) {
@@ -118,7 +121,18 @@ class MainActivity : ComponentActivity() {
                     val trackingState by trackingViewModel.uiState.collectAsState()
 
                     // 页面切换
-                    if (showMap) {
+                    if (showAttitude) {
+                        val attitudeViewModel: AttitudeViewModel = viewModel()
+                        LaunchedEffect(location) {
+                            location?.let {
+                                attitudeViewModel.updateLocation(it)
+                            }
+                        }
+                        AttitudeScreen(
+                            viewModel = attitudeViewModel,
+                            onBack = { showAttitude = false }
+                        )
+                    } else if (showMap) {
                         val selectedTrackId = trackingState.trackList.firstOrNull()?.trackId
                         val trackPoints = if (selectedTrackId != null) {
                             remember(selectedTrackId) {
@@ -174,6 +188,9 @@ class MainActivity : ComponentActivity() {
                             },
                             onMapClick = {
                                 showMap = true
+                            },
+                            onAttitudeClick = {
+                                showAttitude = true
                             }
                         )
                     }
@@ -209,7 +226,8 @@ fun MainScreen(
     onStartTracking: () -> Unit,
     onStopTracking: () -> Unit,
     onViewTracks: () -> Unit,
-    onMapClick: () -> Unit
+    onMapClick: () -> Unit,
+    onAttitudeClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -403,9 +421,11 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 产状测量卡片（占位）
+        // 产状测量卡片
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onAttitudeClick() },
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFF5F3FF).copy(alpha = 0.6f)
             ),
@@ -424,7 +444,7 @@ fun MainScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "阶段6开发中",
+                    text = "测量岩层走向/倾角/倾向",
                     fontSize = 14.sp,
                     color = Color(0xFF475569)
                 )

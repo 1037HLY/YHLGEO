@@ -63,6 +63,13 @@
             android:exported="false"
             android:foregroundServiceType="location" />
 
+        <!-- 轨迹记录Foreground Service -->
+        <service
+            android:name=".domain.service.TrackingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
         <!-- FileProvider for sharing files -->
         <provider
             android:name="androidx.core.content.FileProvider"

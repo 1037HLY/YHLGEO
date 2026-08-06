@@ -1,6 +1,7 @@
 package com.geosurvey.toolbox.presentation.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -17,9 +18,9 @@ import kotlinx.coroutines.launch
 import kotlin.math.*
 
 data class AttitudeUiState(
-    val strike: Float = 0f,           // 走向
-    val dip: Float = 0f,              // 倾角
-    val dipDirection: Float = 0f,     // 倾向
+    val strike: Float = 0f,
+    val dip: Float = 0f,
+    val dipDirection: Float = 0f,
     val isMeasuring: Boolean = false,
     val history: List<AttitudeEntity> = emptyList(),
     val currentLocation: Location? = null,
@@ -57,17 +58,14 @@ class AttitudeViewModel(application: Application) : AndroidViewModel(application
             if (SensorManager.getRotationMatrix(rotationMatrix, null, gravity, geomagnetic)) {
                 SensorManager.getOrientation(rotationMatrix, orientation)
 
-                // 计算走向、倾向、倾角
-                val azimuth = orientation[0] // 方位角 (弧度)
-                val pitch = orientation[1]   // 俯仰角 (弧度)
-                val roll = orientation[2]    // 翻滚角 (弧度)
+                val azimuth = orientation[0]
+                val pitch = orientation[1]
+                val roll = orientation[2]
 
-                // 转换为度
                 var strike = Math.toDegrees(azimuth.toDouble()).toFloat()
                 val dip = Math.toDegrees(pitch.toDouble()).toFloat()
                 var dipDirection = (strike + 90) % 360
 
-                // 修正方向
                 if (strike < 0) strike += 360f
                 if (dipDirection < 0) dipDirection += 360f
 

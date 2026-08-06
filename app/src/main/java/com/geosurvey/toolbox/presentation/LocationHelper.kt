@@ -80,9 +80,8 @@ class LocationHelper(private val context: Context) {
             val gpsStatus = locationManager.getGpsStatus(null)
             var count = 0
             if (gpsStatus != null) {
-                val iterator = gpsStatus.satellites
-                while (iterator.hasNext()) {
-                    iterator.next()
+                // 使用 Kotlin 的 for 循环遍历 Iterable
+                for (sat in gpsStatus.satellites) {
                     count++
                 }
             }

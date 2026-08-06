@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 
 class LocationRepository(
     private val context: Context
@@ -22,7 +21,6 @@ class LocationRepository(
 
     fun getLocationFlow(): Flow<LocationPoint> = callbackFlow {
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            // GPS未开启，发射一个空位置
             trySend(
                 LocationPoint(
                     0.0, 0.0, 0.0, 0f, 0f, 0f,
@@ -76,24 +74,23 @@ class LocationRepository(
     }
 
     /**
-     * 获取当前GNSS卫星状态 - 修复版本
+     * 获取当前GNSS卫星状态 - 正确处理API版本
      */
     private fun getGnssStatus(): GnssInfo {
-        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+        // 如果GPS未启用或API版本低于24，直接返回空
+        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+            android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) {
             return GnssInfo()
         }
 
         try {
-            // Android 7.0+ 使用新API
-            val gnssStatus = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                locationManager.getGnssStatus()
-            } else {
-                // 旧版本返回空
+            // 使用android.location.GnssStatus类型接收
+            val gnssStatus: android.location.GnssStatus? = locationManager.getGnssStatus()
+            if (gnssStatus == null) {
                 return GnssInfo()
-            } ?: return GnssInfo()
-            
-            val satellites = mutableListOf<SatelliteInfo>()
+            }
 
+            val satellites = mutableListOf<SatelliteInfo>()
             for (i in 0 until gnssStatus.satelliteCount) {
                 val prn = gnssStatus.getSvid(i)
                 val constellation = parseConstellation(gnssStatus.getConstellationType(i))
@@ -118,12 +115,14 @@ class LocationRepository(
             return GnssInfo(
                 satelliteCount = satellites.size,
                 usedSatelliteCount = usedCount,
-                hdop = 1.5f,
+                hdop = 1.5f,  // 实际项目中应从NMEA解析
                 vdop = 2.0f,
                 pdop = 2.5f,
                 satellites = satellites
             )
         } catch (e: SecurityException) {
+            return GnssInfo()
+        } catch (e: Exception) {
             return GnssInfo()
         }
     }

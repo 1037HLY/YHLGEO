@@ -6,7 +6,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import com.geosurvey.toolbox.utils.GeologicalAnalysisUtils
 import kotlin.math.*
@@ -63,9 +66,9 @@ fun RoseDiagramView(
                     else -> Color(0xFF0EA5E9)
                 }
 
-                // 绘制花瓣（扇形）
+                // 绘制花瓣（使用 Compose Path）
                 val halfAngle = Math.toRadians(5.0)
-                val path = android.graphics.Path().apply {
+                val path = Path().apply {
                     moveTo(centerX.toFloat(), centerY.toFloat())
                     val p1x = centerX + length * cos(angleRad - halfAngle)
                     val p1y = centerY + length * sin(angleRad - halfAngle)
@@ -90,18 +93,18 @@ fun RoseDiagramView(
                 )
             }
 
-            // 标注方向
-            drawContext.canvas.nativeCanvas.apply {
+            // 标注方向 - 使用 drawIntoCanvas
+            drawIntoCanvas { canvas ->
                 val paint = android.graphics.Paint().apply {
                     color = android.graphics.Color.parseColor("#475569")
                     textSize = 28f
                     isAntiAlias = true
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
-                drawText("N", centerX.toFloat(), (centerY - radius - 10).toFloat(), paint)
-                drawText("S", centerX.toFloat(), (centerY + radius + 30).toFloat(), paint)
-                drawText("E", (centerX + radius + 20).toFloat(), centerY.toFloat() + 10, paint)
-                drawText("W", (centerX - radius - 20).toFloat(), centerY.toFloat() + 10, paint)
+                canvas.nativeCanvas.drawText("N", centerX.toFloat(), (centerY - radius - 10).toFloat(), paint)
+                canvas.nativeCanvas.drawText("S", centerX.toFloat(), (centerY + radius + 30).toFloat(), paint)
+                canvas.nativeCanvas.drawText("E", (centerX + radius + 20).toFloat(), centerY.toFloat() + 10, paint)
+                canvas.nativeCanvas.drawText("W", (centerX - radius - 20).toFloat(), centerY.toFloat() + 10, paint)
             }
         }
     }

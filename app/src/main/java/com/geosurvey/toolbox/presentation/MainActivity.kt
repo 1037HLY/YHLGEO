@@ -142,10 +142,18 @@ class MainActivity : ComponentActivity() {
                             onBack = { showAttitude = false }
                         )
                     } else if (showMap) {
-                        val selectedTrackId = trackingState.trackList.firstOrNull()?.trackId
+                        // 获取选中的轨迹ID - 使用第一个有数据的轨迹
+                        val trackIds = trackingState.trackList.map { it.trackId }
+                        val selectedTrackId = trackIds.firstOrNull()
                         val trackPoints = if (selectedTrackId != null) {
                             remember(selectedTrackId) {
-                                emptyList<TrackPointEntity>()
+                                try {
+                                    val points = trackingViewModel.getTrackPoints(selectedTrackId)
+                                    points
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    emptyList<TrackPointEntity>()
+                                }
                             }
                         } else {
                             emptyList<TrackPointEntity>()

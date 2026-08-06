@@ -19,7 +19,6 @@ import androidx.core.content.ContextCompat
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -202,26 +201,22 @@ fun MainScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 if (!isSearching && location != null) {
+                    val loc = location!!
                     Text(
-                        text = "经度: %.6f  纬度: %.6f".format(
-                            location!!.longitude,
-                            location!!.latitude
-                        ),
+                        text = "经度: %.6f  纬度: %.6f".format(loc.longitude, loc.latitude),
                         fontSize = 14.sp,
                         color = Color(0xFF0F172A)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "海拔: %.1fm  速度: %.1fkm/h".format(
-                            location!!.altitude,
-                            location!!.speed * 3.6
-                        ),
+                        text = "海拔: %.1fm  速度: %.1fkm/h".format(loc.altitude, loc.speed * 3.6),
                         fontSize = 14.sp,
                         color = Color(0xFF475569)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+                    // 修复：使用 String.format
                     Text(
-                        text = "精度: %.1fm  🛰️ 卫星: $satelliteCount 颗",
+                        text = String.format("精度: %.1fm  🛰️ 卫星: %d 颗", loc.accuracy, satelliteCount),
                         fontSize = 13.sp,
                         color = Color(0xFF475569)
                     )
@@ -243,7 +238,6 @@ fun MainScreen(
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8)
                     )
-                    // 显示搜索时间
                     if (hasPermission && isSearching) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(

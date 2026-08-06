@@ -2,6 +2,7 @@ package com.geosurvey.toolbox.presentation
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,9 +24,14 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : ComponentActivity() {
+    private lateinit var locationHelper: LocationHelper
+
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 初始化定位助手
+        locationHelper = LocationHelper(this)
 
         setContent {
             GeoSurveyTheme {
@@ -63,47 +69,46 @@ class MainActivity : ComponentActivity() {
                         hasPermission = hasPermission,
                         onRequestPermission = {
                             permissionsState.launchMultiplePermissionRequest()
-                        }
+                        },
+                        locationHelper = locationHelper
                     )
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        locationHelper.stopLocationUpdates()
     }
 }
 
 @Composable
 fun MainScreen(
     hasPermission: Boolean,
-    onRequestPermission: () -> Unit
+    onRequestPermission: () -> Unit,
+    locationHelper: LocationHelper
 ) {
-    // 模拟定位数据状态
-    var latitude by remember { mutableStateOf(0.0) }
-    var longitude by remember { mutableStateOf(0.0) }
-    var altitude by remember { mutableStateOf(0.0) }
-    var speed by remember { mutableStateOf(0f) }
-    var satelliteCount by remember { mutableStateOf(0) }
+    // 定位数据状态
+    var location by remember { mutableStateOf<Location?>(null) }
     var isSearching by remember { mutableStateOf(true) }
+    var satelliteCount by remember { mutableStateOf(0) }
     var timeText by remember { mutableStateOf("--:--:--") }
 
-    // 模拟定位更新
+    // 开始监听GPS数据
     LaunchedEffect(hasPermission) {
         if (hasPermission) {
-            var counter = 0
-            while (true) {
-                delay(2000) // 每2秒更新一次
-                counter++
-
-                // 模拟GPS数据变化
-                latitude = 39.9 + counter * 0.0001
-                longitude = 116.4 + counter * 0.0001
-                altitude = 50.0 + counter * 0.5
-                speed = (1 + counter * 0.1).toFloat()
-                satelliteCount = 6 + (counter % 5) // 6-10颗卫星
-                isSearching = false
-
-                val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                timeText = timeFormat.format(Date())
-            }
+            locationHelper.startLocationUpdates(
+                onLocationUpdate = { newLocation ->
+                    location = newLocation
+                    isSearching = false
+                    val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                    timeText = timeFormat.format(Date())
+                },
+                onSatelliteUpdate = { count ->
+                    satelliteCount = count
+                }
+            )
         }
     }
 
@@ -164,7 +169,7 @@ fun MainScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // 定位卡片 - 显示模拟数据
+        // 定位卡片 - 显示真实GPS数据
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -196,21 +201,27 @@ fun MainScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                if (!isSearching) {
+                if (!isSearching && location != null) {
                     Text(
-                        text = "经度: %.6f  纬度: %.6f".format(longitude, latitude),
+                        text = "经度: %.6f  纬度: %.6f".format(
+                            location!!.longitude,
+                            location!!.latitude
+                        ),
                         fontSize = 14.sp,
                         color = Color(0xFF0F172A)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "海拔: %.1fm  速度: %.1fkm/h".format(altitude, speed * 3.6),
+                        text = "海拔: %.1fm  速度: %.1fkm/h".format(
+                            location!!.altitude,
+                            location!!.speed * 3.6
+                        ),
                         fontSize = 14.sp,
                         color = Color(0xFF475569)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "🛰️ 卫星: $satelliteCount 颗",
+                        text = "精度: %.1fm  🛰️ 卫星: $satelliteCount 颗",
                         fontSize = 13.sp,
                         color = Color(0xFF475569)
                     )
@@ -232,6 +243,15 @@ fun MainScreen(
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8)
                     )
+                    // 显示搜索时间
+                    if (hasPermission && isSearching) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "⏳ 首次定位可能需要30-60秒",
+                            fontSize = 12.sp,
+                            color = Color(0xFFF59E0B)
+                        )
+                    }
                 }
             }
         }
@@ -259,7 +279,11 @@ fun MainScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "阶段3开发中",
+                    text = if (!isSearching && location != null) {
+                        "📍 当前位置: %.4f, %.4f".format(location!!.latitude, location!!.longitude)
+                    } else {
+                        "⏳ 等待定位..."
+                    },
                     fontSize = 14.sp,
                     color = Color(0xFF475569)
                 )
@@ -299,13 +323,15 @@ fun MainScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = if (isSearching) {
-                "🔍 正在搜索GPS信号..."
+            text = if (!hasPermission) {
+                "⏳ 请授予定位权限以使用GPS功能"
+            } else if (isSearching) {
+                "🔍 正在搜索GPS信号... 请稍候"
             } else {
-                "✅ 已获取定位数据（模拟）"
+                "✅ 已获取真实GPS定位数据"
             },
             fontSize = 14.sp,
-            color = if (isSearching) Color(0xFFF59E0B) else Color(0xFF10B981)
+            color = if (isSearching && hasPermission) Color(0xFFF59E0B) else Color(0xFF10B981)
         )
     }
 }

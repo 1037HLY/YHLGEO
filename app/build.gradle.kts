@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.geosurvey.toolbox"
-    compileSdk = 34
+    compileSdk = 33  // 从34改为33
 
     defaultConfig {
         applicationId = "com.geosurvey.toolbox"
-        minSdk = 28
-        targetSdk = 34
+        minSdk = 24  // 从28改为24，支持更多设备
+        targetSdk = 33  // 从34改为33
         versionCode = 1
         versionName = "1.0.0"
 
@@ -59,6 +59,9 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/LICENSE"
         }
     }
 }

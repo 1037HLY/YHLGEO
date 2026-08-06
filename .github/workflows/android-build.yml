@@ -25,37 +25,17 @@ jobs:
       run: |
         mkdir -p gradle/wrapper
         curl -L https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
-        echo "✅ gradle-wrapper.jar downloaded"
 
     - name: Fix gradlew permissions
-      run: |
-        chmod +x gradlew
-        ls -la gradlew
+      run: chmod +x gradlew
 
-    - name: Build APK
-      run: |
-        ./gradlew assembleRelease --no-daemon
+    - name: Build Debug APK (No signature needed)
+      run: ./gradlew assembleDebug --no-daemon
 
-    - name: Upload APK - Release
+    - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       if: success()
       with:
-        name: GeoSurveyToolbox-APK
-        path: app/build/outputs/apk/release/*.apk
-        retention-days: 30
-
-    - name: Upload APK - Debug
-      uses: actions/upload-artifact@v4
-      if: success()
-      with:
-        name: GeoSurveyToolbox-APK-Debug
+        name: GeoSurveyToolbox-Debug
         path: app/build/outputs/apk/debug/*.apk
-        retention-days: 30
-
-    - name: Upload Mapping File
-      uses: actions/upload-artifact@v4
-      if: success()
-      with:
-        name: ProGuard-Mapping
-        path: app/build/outputs/mapping/release/mapping.txt
         retention-days: 30

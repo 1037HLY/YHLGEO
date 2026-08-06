@@ -5,7 +5,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
-import kotlinx.coroutines.*
 
 class LocationHelper(private val context: Context) {
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -26,7 +25,6 @@ class LocationHelper(private val context: Context) {
         }
 
         try {
-            // 使用现代的LocationListener实现
             locationListener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
                     onLocationUpdate(location)
@@ -37,7 +35,6 @@ class LocationHelper(private val context: Context) {
                     // 状态变化，不需要处理
                 }
 
-                // 注意：Android 30+ 中这两个方法已被废弃，但为了兼容性保留
                 @Suppress("DEPRECATION")
                 override fun onProviderEnabled(provider: String) {
                     // 提供者启用，不需要处理
@@ -49,11 +46,10 @@ class LocationHelper(private val context: Context) {
                 }
             }
 
-            // 使用GPS Provider
             locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
-                1000L, // 1秒更新一次
-                1f,    // 移动1米更新
+                1000L,
+                1f,
                 locationListener!!
             )
             isListening = true
@@ -82,12 +78,19 @@ class LocationHelper(private val context: Context) {
     private fun updateSatelliteCount() {
         try {
             val gpsStatus = locationManager.getGpsStatus(null)
-            val count = gpsStatus?.satellites?.count() ?: 0
+            var count = 0
+            if (gpsStatus != null) {
+                val iterator = gpsStatus.satellites
+                while (iterator.hasNext()) {
+                    iterator.next()
+                    count++
+                }
+            }
             onSatelliteUpdate?.invoke(count)
         } catch (e: SecurityException) {
-            // 权限问题
+            onSatelliteUpdate?.invoke(0)
         } catch (e: Exception) {
-            // 其他异常
+            onSatelliteUpdate?.invoke(0)
         }
     }
 }

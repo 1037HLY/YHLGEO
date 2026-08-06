@@ -107,10 +107,12 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
                 val fileName = "geo_${System.currentTimeMillis()}.jpg"
                 val file = File(getApplication().filesDir, fileName)
-                // 修复：显式指定类型
-                val outputStream: FileOutputStream = FileOutputStream(file)
-                outputStream.use {
-                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                // 修复1：显式声明FileOutputStream类型
+                val fos = FileOutputStream(file)
+                try {
+                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
+                } finally {
+                    fos.close()
                 }
 
                 // 保存到相册
@@ -256,9 +258,13 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     contentValues
                 )
-                uri?.let { uriNotNull ->
-                    context.contentResolver.openOutputStream(uriNotNull)?.use { outputStream ->
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                uri?.let { imageUri ->
+                    context.contentResolver.openOutputStream(imageUri)?.let { outputStream ->
+                        try {
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                        } finally {
+                            outputStream.close()
+                        }
                     }
                 }
             } else {
@@ -271,9 +277,11 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     dir.mkdirs()
                 }
                 val file = File(dir, fileName)
-                val outputStream: FileOutputStream = FileOutputStream(file)
-                outputStream.use {
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                val fos = FileOutputStream(file)
+                try {
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
+                } finally {
+                    fos.close()
                 }
             }
         } catch (e: Exception) {

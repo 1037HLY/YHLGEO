@@ -140,14 +140,14 @@ class LocationRepository(
      */
     private fun getLegacySatelliteInfo(): GnssInfo {
         try {
-            // 使用GpsStatus.Listener获取卫星信息（已废弃但兼容）
-            var satellites = mutableListOf<SatelliteInfo>()
+            val satellites = mutableListOf<SatelliteInfo>()
             var count = 0
 
             // 尝试获取GpsStatus
             val gpsStatus = locationManager.getGpsStatus(null)
             if (gpsStatus != null) {
                 val iter = gpsStatus.satellites
+                // 使用Kotlin的while循环
                 while (iter.hasNext()) {
                     val sat = iter.next()
                     count++

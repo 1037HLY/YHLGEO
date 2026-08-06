@@ -2,8 +2,7 @@ package com.geosurvey.toolbox.presentation.ui.components
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
 import android.view.View
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -45,13 +44,11 @@ fun OsmMapView(
                 setMultiTouchControls(true)
                 isHorizontalMapRepetitionEnabled = false
 
-                // 设置中心点
                 center?.let {
                     controller.setCenter(it)
                     controller.setZoom(zoom)
                 }
 
-                // 添加覆盖层
                 markers.forEach { markerData ->
                     val marker = MapUtils.createMarker(
                         this,
@@ -60,7 +57,8 @@ fun OsmMapView(
                         markerData.snippet
                     )
                     markerData.icon?.let { icon ->
-                        marker.icon = icon
+                        // 将 Bitmap 转换为 Drawable
+                        marker.icon = BitmapDrawable(context.resources, icon)
                     }
                     overlays.add(marker)
                 }
@@ -78,17 +76,13 @@ fun OsmMapView(
             }
         },
         update = { mapView ->
-            // 更新中心点
             center?.let {
                 mapView.controller.setCenter(it)
             }
-            // 更新缩放
             mapView.controller.setZoom(zoom)
 
-            // 清除旧覆盖层，保留基础层
             mapView.overlays.clear()
 
-            // 重新添加标记
             markers.forEach { markerData ->
                 val marker = MapUtils.createMarker(
                     mapView,
@@ -97,12 +91,11 @@ fun OsmMapView(
                     markerData.snippet
                 )
                 markerData.icon?.let { icon ->
-                    marker.icon = icon
+                    marker.icon = BitmapDrawable(context.resources, icon)
                 }
                 mapView.overlays.add(marker)
             }
 
-            // 重新添加轨迹
             polylines.forEach { polylineData ->
                 val polyline = MapUtils.createPolyline(
                     polylineData.points,

@@ -26,19 +26,30 @@ class LocationHelper(private val context: Context) {
         }
 
         try {
+            // 使用现代的LocationListener实现
             locationListener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
                     onLocationUpdate(location)
                     updateSatelliteCount()
                 }
 
-                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
+                    // 状态变化，不需要处理
+                }
 
-                override fun onProviderEnabled(provider: String?) {}
+                // 注意：Android 30+ 中这两个方法已被废弃，但为了兼容性保留
+                @Suppress("DEPRECATION")
+                override fun onProviderEnabled(provider: String) {
+                    // 提供者启用，不需要处理
+                }
 
-                override fun onProviderDisabled(provider: String?) {}
+                @Suppress("DEPRECATION")
+                override fun onProviderDisabled(provider: String) {
+                    // 提供者禁用，不需要处理
+                }
             }
 
+            // 使用GPS Provider
             locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
                 1000L, // 1秒更新一次

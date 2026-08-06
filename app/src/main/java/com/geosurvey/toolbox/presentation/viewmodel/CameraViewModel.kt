@@ -4,14 +4,10 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.location.Location
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.geosurvey.toolbox.data.database.AppDatabase
 import com.geosurvey.toolbox.data.database.PhotoEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -43,13 +39,8 @@ data class CameraUiState(
 )
 
 class CameraViewModel(application: Application) : AndroidViewModel(application) {
-    private val database = AppDatabase.getDatabase(application)
     private val _uiState = MutableStateFlow(CameraUiState())
     val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
-
-    init {
-        loadPhotos()
-    }
 
     fun updateLocation(location: Location) {
         _uiState.value = _uiState.value.copy(currentLocation = location)
@@ -72,70 +63,46 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun loadPhotos() {
-        viewModelScope.launch {
-            try {
-                database.photoDao().getAllPhotos().collect { photos ->
-                    _uiState.value = _uiState.value.copy(photoList = photos)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        // 暂时从UIState中移除历史照片功能
+        _uiState.value = _uiState.value.copy(photoList = emptyList())
     }
 
-    /**
-     * 保存带水印的照片
-     * 简化版：保存到数据库，文件路径使用模拟路径
-     */
     fun savePhotoWithWatermark(
         originalBitmap: Bitmap,
         locationName: String = ""
     ) {
-        // 使用 GlobalScope 或 viewModelScope 都可能有问题，改用 Thread
-        Thread {
-            try {
-                _uiState.value = _uiState.value.copy(isTakingPhoto = true)
+        // 模拟保存
+        val state = _uiState.value
+        val watermarkText = buildWatermarkText(state, locationName)
+        
+        // 生成模拟路径
+        val fileName = "geo_${System.currentTimeMillis()}.jpg"
+        val filePath = getApplication().filesDir.absolutePath + "/" + fileName
 
-                val state = _uiState.value
+        // 创建模拟的PhotoEntity
+        val photoEntity = PhotoEntity(
+            imagePath = filePath,
+            latitude = state.currentLocation?.latitude ?: 0.0,
+            longitude = state.currentLocation?.longitude ?: 0.0,
+            altitude = state.currentLocation?.altitude ?: 0.0,
+            timestamp = System.currentTimeMillis(),
+            strike = state.strike,
+            dip = state.dip,
+            dipDirection = state.dipDirection,
+            note = state.note,
+            watermarkText = watermarkText
+        )
 
-                // 生成水印文本
-                val watermarkText = buildWatermarkText(state, locationName)
-                
-                // TODO: 实际的水印绘制和文件保存功能待实现
-                // 这里暂时保存一个模拟路径到数据库
-                val fileName = "geo_${System.currentTimeMillis()}.jpg"
-                val filePath = getApplication().filesDir.absolutePath + File.separator + fileName
-
-                // 创建模拟的PhotoEntity保存到数据库
-                val photoEntity = PhotoEntity(
-                    imagePath = filePath,
-                    latitude = state.currentLocation?.latitude ?: 0.0,
-                    longitude = state.currentLocation?.longitude ?: 0.0,
-                    altitude = state.currentLocation?.altitude ?: 0.0,
-                    timestamp = System.currentTimeMillis(),
-                    strike = state.strike,
-                    dip = state.dip,
-                    dipDirection = state.dipDirection,
-                    note = state.note,
-                    watermarkText = watermarkText
-                )
-                database.photoDao().insert(photoEntity)
-
-                _uiState.value = _uiState.value.copy(
-                    isTakingPhoto = false,
-                    lastPhotoPath = filePath,
-                    note = ""
-                )
-                loadPhotos()
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _uiState.value = _uiState.value.copy(
-                    isTakingPhoto = false,
-                    error = "保存照片失败: ${e.message}"
-                )
-            }
-        }.start()
+        // 更新状态
+        val currentList = _uiState.value.photoList.toMutableList()
+        currentList.add(0, photoEntity)
+        
+        _uiState.value = _uiState.value.copy(
+            isTakingPhoto = false,
+            lastPhotoPath = filePath,
+            note = "",
+            photoList = currentList
+        )
     }
 
     private fun buildWatermarkText(state: CameraUiState, locationName: String): String {
@@ -172,17 +139,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun deletePhoto(photoId: Long) {
-        viewModelScope.launch {
-            try {
-                val photo = database.photoDao().getPhoto(photoId)
-                photo?.let {
-                    File(it.imagePath).delete()
-                }
-                database.photoDao().deletePhoto(photoId)
-                loadPhotos()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        val currentList = _uiState.value.photoList.toMutableList()
+        currentList.removeAll { it.id == photoId }
+        _uiState.value = _uiState.value.copy(photoList = currentList)
     }
 }

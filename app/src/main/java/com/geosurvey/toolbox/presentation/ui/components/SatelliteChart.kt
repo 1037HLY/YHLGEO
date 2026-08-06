@@ -7,8 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,7 +70,6 @@ fun SatelliteChart(
             // 绘制卫星点
             satellites.forEach { sat ->
                 if (sat.elevation > 0) {
-                    // 极坐标转直角坐标
                     val elevationRad = sat.elevation / 180f * PI.toFloat()
                     val azimuthRad = (sat.azimuth - 90) / 180f * PI.toFloat()
 
@@ -78,9 +78,9 @@ fun SatelliteChart(
                     val y = centerY - distance * sin(azimuthRad)
 
                     val color = when {
-                        sat.usedInFix -> Color(0xFF10B981)  // 绿色 - 已用
-                        sat.snr > 30 -> Color(0xFFF59E0B)    // 橙色 - 信号强但未用
-                        else -> Color(0xFFEF4444)            // 红色 - 信号弱
+                        sat.usedInFix -> Color(0xFF10B981)
+                        sat.snr > 30 -> Color(0xFFF59E0B)
+                        else -> Color(0xFFEF4444)
                     }
 
                     drawCircle(
@@ -89,17 +89,15 @@ fun SatelliteChart(
                         center = Offset(x, y)
                     )
 
-                    // 显示卫星编号
-                    drawContext.canvas.nativeCanvas.drawText(
-                        sat.prn.toString(),
-                        x + 10,
-                        y + 4,
-                        android.graphics.Paint().apply {
+                    // 绘制卫星编号（使用drawContext.canvas.nativeCanvas）
+                    drawContext.canvas.nativeCanvas.apply {
+                        val paint = android.graphics.Paint().apply {
                             color = android.graphics.Color.parseColor("#475569")
                             textSize = 28f
                             isAntiAlias = true
                         }
-                    )
+                        drawText(sat.prn.toString(), x + 10, y + 4, paint)
+                    }
                 }
             }
 
@@ -110,18 +108,16 @@ fun SatelliteChart(
                 center = Offset(centerX, centerY)
             )
 
-            // 绘制方向标记
-            drawContext.canvas.nativeCanvas.drawText(
-                "N",
-                centerX - 8,
-                centerY - radius + 20,
-                android.graphics.Paint().apply {
+            // 绘制方向标记N
+            drawContext.canvas.nativeCanvas.apply {
+                val paint = android.graphics.Paint().apply {
                     color = android.graphics.Color.parseColor("#0EA5E9")
                     textSize = 36f
                     isAntiAlias = true
                     textAlign = android.graphics.Paint.Align.CENTER
                 }
-            )
+                drawText("N", centerX.toFloat(), (centerY - radius + 20).toFloat(), paint)
+            }
         }
     }
 }

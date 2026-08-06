@@ -63,7 +63,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun loadPhotos() {
-        // 暂时从UIState中移除历史照片功能
+        // 保留空列表
         _uiState.value = _uiState.value.copy(photoList = emptyList())
     }
 
@@ -71,15 +71,13 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         originalBitmap: Bitmap,
         locationName: String = ""
     ) {
-        // 模拟保存
         val state = _uiState.value
         val watermarkText = buildWatermarkText(state, locationName)
         
-        // 生成模拟路径
         val fileName = "geo_${System.currentTimeMillis()}.jpg"
         val filePath = getApplication().filesDir.absolutePath + "/" + fileName
 
-        // 创建模拟的PhotoEntity
+        // 创建模拟 PhotoEntity
         val photoEntity = PhotoEntity(
             imagePath = filePath,
             latitude = state.currentLocation?.latitude ?: 0.0,
@@ -93,15 +91,17 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             watermarkText = watermarkText
         )
 
-        // 更新状态
-        val currentList = _uiState.value.photoList.toMutableList()
-        currentList.add(0, photoEntity)
+        // 使用不可变列表操作
+        val currentList = _uiState.value.photoList
+        val newList = mutableListOf<PhotoEntity>()
+        newList.addAll(currentList)
+        newList.add(0, photoEntity)
         
         _uiState.value = _uiState.value.copy(
             isTakingPhoto = false,
             lastPhotoPath = filePath,
             note = "",
-            photoList = currentList
+            photoList = newList
         )
     }
 
@@ -139,8 +139,13 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun deletePhoto(photoId: Long) {
-        val currentList = _uiState.value.photoList.toMutableList()
-        currentList.removeAll { it.id == photoId }
-        _uiState.value = _uiState.value.copy(photoList = currentList)
+        val currentList = _uiState.value.photoList
+        val newList = mutableListOf<PhotoEntity>()
+        for (photo in currentList) {
+            if (photo.id != photoId) {
+                newList.add(photo)
+            }
+        }
+        _uiState.value = _uiState.value.copy(photoList = newList)
     }
 }

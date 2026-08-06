@@ -107,8 +107,10 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
                 val fileName = "geo_${System.currentTimeMillis()}.jpg"
                 val file = File(getApplication().filesDir, fileName)
-                FileOutputStream(file).use { outputStream ->
-                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                // 修复：显式指定类型
+                val outputStream: FileOutputStream = FileOutputStream(file)
+                outputStream.use {
+                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
                 }
 
                 // 保存到相册
@@ -254,8 +256,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     contentValues
                 )
-                uri?.let {
-                    context.contentResolver.openOutputStream(it)?.use { outputStream ->
+                uri?.let { uriNotNull ->
+                    context.contentResolver.openOutputStream(uriNotNull)?.use { outputStream ->
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
                     }
                 }
@@ -269,8 +271,9 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     dir.mkdirs()
                 }
                 val file = File(dir, fileName)
-                FileOutputStream(file).use { outputStream ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                val outputStream: FileOutputStream = FileOutputStream(file)
+                outputStream.use {
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
                 }
             }
         } catch (e: Exception) {

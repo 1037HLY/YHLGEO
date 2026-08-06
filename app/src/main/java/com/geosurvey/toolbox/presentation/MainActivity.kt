@@ -37,10 +37,20 @@ class MainActivity : ComponentActivity() {
                         )
                     )
 
-                    val hasPermission = ContextCompat.checkSelfPermission(
-                        this@MainActivity,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
+                    // 使用状态变量跟踪权限变化
+                    var hasPermission by remember {
+                        mutableStateOf(
+                            ContextCompat.checkSelfPermission(
+                                this@MainActivity,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+                        )
+                    }
+
+                    // 监听权限变化
+                    LaunchedEffect(permissionsState.allPermissionsGranted) {
+                        hasPermission = permissionsState.allPermissionsGranted
+                    }
 
                     // 首次启动请求权限
                     LaunchedEffect(Unit) {
@@ -89,7 +99,7 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 权限状态提示
+        // 权限状态提示 - 只有没有权限时才显示
         if (!hasPermission) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -123,7 +133,7 @@ fun MainScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // 定位卡片
+        // 定位卡片 - 显示状态
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -144,10 +154,22 @@ fun MainScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = if (hasPermission) "✅ 权限已授予，等待定位..." else "⏳ 等待授权...",
+                    text = if (hasPermission) {
+                        "🛰️ 正在搜索卫星信号..."
+                    } else {
+                        "⏳ 等待授权..."
+                    },
                     fontSize = 14.sp,
-                    color = if (hasPermission) Color(0xFF10B981) else Color(0xFF475569)
+                    color = if (hasPermission) Color(0xFF0EA5E9) else Color(0xFF475569)
                 )
+                if (hasPermission) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "请确保GPS已开启，并移动到开阔地带",
+                        fontSize = 12.sp,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
             }
         }
 
@@ -214,9 +236,13 @@ fun MainScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "✅ 应用运行正常，正在等待定位权限...",
+            text = if (hasPermission) {
+                "✅ 权限已授予，正在搜索GPS信号..."
+            } else {
+                "⏳ 请授予定位权限以使用GPS功能"
+            },
             fontSize = 14.sp,
-            color = Color(0xFF10B981)
+            color = if (hasPermission) Color(0xFF10B981) else Color(0xFF94A3B8)
         )
     }
 }

@@ -6,6 +6,7 @@ import android.location.Location
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
+import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import java.text.SimpleDateFormat
@@ -29,7 +31,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 初始化定位助手
         locationHelper = LocationHelper(this)
 
         setContent {
@@ -64,13 +65,49 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    // 状态
+                    var location by remember { mutableStateOf<Location?>(null) }
+                    var isSearching by remember { mutableStateOf(true) }
+                    var gnssData by remember { mutableStateOf(GnssStatusData(emptyList(), 0, 0, 0f, 0f, 0f)) }
+                    var timeText by remember { mutableStateOf("--:--:--") }
+                    var showDialog by remember { mutableStateOf(false) }
+
+                    // 监听GPS数据
+                    LaunchedEffect(hasPermission) {
+                        if (hasPermission) {
+                            locationHelper.startLocationUpdates(
+                                onLocationUpdate = { newLocation ->
+                                    location = newLocation
+                                    isSearching = false
+                                    val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                                    timeText = timeFormat.format(Date())
+                                },
+                                onGnssStatusUpdate = { data ->
+                                    gnssData = data
+                                }
+                            )
+                        }
+                    }
+
                     MainScreen(
                         hasPermission = hasPermission,
                         onRequestPermission = {
                             permissionsState.launchMultiplePermissionRequest()
                         },
-                        locationHelper = locationHelper
+                        location = location,
+                        isSearching = isSearching,
+                        gnssData = gnssData,
+                        timeText = timeText,
+                        onCardClick = { showDialog = true }
                     )
+
+                    // 全屏弹窗
+                    if (showDialog) {
+                        GnssFullScreenDialog(
+                            statusData = gnssData,
+                            onDismiss = { showDialog = false }
+                        )
+                    }
                 }
             }
         }
@@ -86,31 +123,12 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(
     hasPermission: Boolean,
     onRequestPermission: () -> Unit,
-    locationHelper: LocationHelper
+    location: Location?,
+    isSearching: Boolean,
+    gnssData: GnssStatusData,
+    timeText: String,
+    onCardClick: () -> Unit
 ) {
-    // 定位数据状态
-    var location by remember { mutableStateOf<Location?>(null) }
-    var isSearching by remember { mutableStateOf(true) }
-    var satelliteCount by remember { mutableStateOf(0) }
-    var timeText by remember { mutableStateOf("--:--:--") }
-
-    // 开始监听GPS数据
-    LaunchedEffect(hasPermission) {
-        if (hasPermission) {
-            locationHelper.startLocationUpdates(
-                onLocationUpdate = { newLocation ->
-                    location = newLocation
-                    isSearching = false
-                    val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                    timeText = timeFormat.format(Date())
-                },
-                onSatelliteUpdate = { count ->
-                    satelliteCount = count
-                }
-            )
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -134,7 +152,6 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 权限状态提示
         if (!hasPermission) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -168,9 +185,11 @@ fun MainScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // 定位卡片 - 显示真实GPS数据
+        // 定位卡片 - 可点击展开
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { if (!isSearching && location != null) onCardClick() },
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFE8F0FE).copy(alpha = 0.7f)
             ),
@@ -214,9 +233,8 @@ fun MainScreen(
                         color = Color(0xFF475569)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    // 修复：使用 String.format
                     Text(
-                        text = String.format("精度: %.1fm  🛰️ 卫星: %d 颗", loc.accuracy, satelliteCount),
+                        text = String.format("精度: %.1fm  🛰️ 卫星: %d 颗", loc.accuracy, gnssData.totalCount),
                         fontSize = 13.sp,
                         color = Color(0xFF475569)
                     )
@@ -226,6 +244,14 @@ fun MainScreen(
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8)
                     )
+                    if (gnssData.totalCount > 0) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "👆 点击查看卫星详情",
+                            fontSize = 12.sp,
+                            color = Color(0xFF0EA5E9)
+                        )
+                    }
                 } else {
                     Text(
                         text = "🛰️ 正在搜索卫星信号...",

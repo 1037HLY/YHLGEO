@@ -28,12 +28,10 @@ import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
 import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
 import com.geosurvey.toolbox.presentation.ui.screens.AnalysisScreen
 import com.geosurvey.toolbox.presentation.ui.screens.AttitudeScreen
-import com.geosurvey.toolbox.presentation.ui.screens.CameraScreen
 import com.geosurvey.toolbox.presentation.ui.screens.MapScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
 import com.geosurvey.toolbox.presentation.viewmodel.AnalysisViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.AttitudeViewModel
-import com.geosurvey.toolbox.presentation.viewmodel.CameraViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -73,8 +71,7 @@ class MainActivity : ComponentActivity() {
                             Manifest.permission.ACCESS_FINE_LOCATION,
                             Manifest.permission.ACCESS_COARSE_LOCATION,
                             Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-                            Manifest.permission.POST_NOTIFICATIONS,
-                            Manifest.permission.CAMERA
+                            Manifest.permission.POST_NOTIFICATIONS
                         )
                     )
 
@@ -106,7 +103,6 @@ class MainActivity : ComponentActivity() {
                     var showMap by remember { mutableStateOf(false) }
                     var showAttitude by remember { mutableStateOf(false) }
                     var showAnalysis by remember { mutableStateOf(false) }
-                    var showCamera by remember { mutableStateOf(false) }
 
                     LaunchedEffect(hasPermission) {
                         if (hasPermission) {
@@ -128,18 +124,7 @@ class MainActivity : ComponentActivity() {
                     val trackingState by trackingViewModel.uiState.collectAsState()
 
                     // 页面切换
-                    if (showCamera) {
-                        val cameraViewModel: CameraViewModel = viewModel()
-                        LaunchedEffect(location) {
-                            location?.let {
-                                cameraViewModel.updateLocation(it)
-                            }
-                        }
-                        CameraScreen(
-                            viewModel = cameraViewModel,
-                            onBack = { showCamera = false }
-                        )
-                    } else if (showAnalysis) {
+                    if (showAnalysis) {
                         val analysisViewModel: AnalysisViewModel = viewModel()
                         AnalysisScreen(
                             viewModel = analysisViewModel,
@@ -218,9 +203,6 @@ class MainActivity : ComponentActivity() {
                             },
                             onAnalysisClick = {
                                 showAnalysis = true
-                            },
-                            onCameraClick = {
-                                showCamera = true
                             }
                         )
                     }
@@ -258,8 +240,7 @@ fun MainScreen(
     onViewTracks: () -> Unit,
     onMapClick: () -> Unit,
     onAttitudeClick: () -> Unit,
-    onAnalysisClick: () -> Unit,
-    onCameraClick: () -> Unit
+    onAnalysisClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -517,11 +498,9 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 水印相机卡片
+        // 水印相机卡片（占位 - 待实现）
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onCameraClick() },
+            modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFFFF3E0).copy(alpha = 0.6f)
             ),
@@ -540,7 +519,7 @@ fun MainScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "拍照并叠加坐标/时间/产状水印",
+                    text = "拍照并叠加坐标/时间/产状水印 (开发中)",
                     fontSize = 14.sp,
                     color = Color(0xFF475569)
                 )

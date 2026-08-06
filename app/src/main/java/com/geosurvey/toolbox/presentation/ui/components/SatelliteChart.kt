@@ -7,8 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import com.geosurvey.toolbox.presentation.SatelliteDetail
 import kotlin.math.*
@@ -74,32 +72,17 @@ fun SatelliteChart(
                     val x = centerX + distance * cos(azimuthRad)
                     val y = centerY - distance * sin(azimuthRad)
 
-                    val color = when {
+                    val pointColor = when {
                         sat.usedInFix -> Color(0xFF10B981)
                         sat.snr > 30 -> Color(0xFFF59E0B)
                         else -> Color(0xFFEF4444)
                     }
 
                     drawCircle(
-                        color = color,
+                        color = pointColor,
                         radius = if (sat.usedInFix) 8f else 5f,
                         center = Offset(x, y)
                     )
-
-                    // 使用 drawIntoCanvas 绘制文字
-                    drawIntoCanvas { canvas ->
-                        val paint = android.graphics.Paint().apply {
-                            color = android.graphics.Color.parseColor("#475569")
-                            textSize = 28f
-                            isAntiAlias = true
-                        }
-                        canvas.nativeCanvas.drawText(
-                            sat.prn.toString(),
-                            x + 10,
-                            y + 4,
-                            paint
-                        )
-                    }
                 }
             }
 
@@ -109,22 +92,6 @@ fun SatelliteChart(
                 radius = 4f,
                 center = Offset(centerX, centerY)
             )
-
-            // 绘制方向标记N
-            drawIntoCanvas { canvas ->
-                val paint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.parseColor("#0EA5E9")
-                    textSize = 36f
-                    isAntiAlias = true
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
-                canvas.nativeCanvas.drawText(
-                    "N",
-                    centerX.toFloat(),
-                    (centerY - radius + 20).toFloat(),
-                    paint
-                )
-            }
         }
     }
 }

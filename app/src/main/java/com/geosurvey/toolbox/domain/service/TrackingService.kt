@@ -27,7 +27,6 @@ class TrackingService : Service() {
         private const val CHANNEL_ID = "tracking_channel"
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
-        const val ACTION_GET_STATUS = "ACTION_GET_STATUS"
         const val EXTRA_TRACK_ID = "EXTRA_TRACK_ID"
 
         fun startService(context: Context, trackId: String) {
@@ -66,9 +65,6 @@ class TrackingService : Service() {
             ACTION_STOP -> {
                 stopTracking()
             }
-            ACTION_GET_STATUS -> {
-                broadcastStatus()
-            }
         }
         return START_STICKY
     }
@@ -87,7 +83,7 @@ class TrackingService : Service() {
                 saveLocation(trackId, location)
             },
             onGnssStatusUpdate = { statusData ->
-                updateNotification(statusData)
+                // 更新卫星状态
             }
         )
 
@@ -121,32 +117,11 @@ class TrackingService : Service() {
                 )
                 database.trackPointDao().insert(entity)
                 pointCount++
-
-                if (pointCount % 10 == 0) {
-                    updateNotification("已记录 $pointCount 个点", pointCount)
-                    broadcastStatus()
-                }
+                broadcastStatus()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
-    }
-
-    private fun updateNotification(statusData: GnssStatusData?) {
-        val text = if (statusData != null) {
-            "卫星: ${statusData.totalCount}  |  已记录: $pointCount 点"
-        } else {
-            "已记录: $pointCount 点"
-        }
-        val notification = createNotification(text, pointCount)
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, notification)
-    }
-
-    private fun updateNotification(text: String, count: Int) {
-        val notification = createNotification(text, count)
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, notification)
     }
 
     private fun createNotification(text: String, count: Int): Notification {
@@ -156,10 +131,6 @@ class TrackingService : Service() {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-
-        if (count > 0) {
-            builder.setProgress(100, (count % 100), false)
-        }
 
         val stopIntent = Intent(this, TrackingService::class.java).apply {
             action = ACTION_STOP

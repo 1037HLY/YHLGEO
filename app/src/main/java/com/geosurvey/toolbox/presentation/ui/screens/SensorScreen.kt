@@ -146,7 +146,7 @@ fun SensorCurveCard(
             .fillMaxWidth()
             .height(150.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFFFFF).copy(alpha = 0.7f)
+            containerColor = Color(0xFFFFFFFF).copy(alpha = 0.85f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

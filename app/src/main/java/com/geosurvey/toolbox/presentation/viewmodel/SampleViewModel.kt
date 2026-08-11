@@ -59,45 +59,67 @@ class SampleViewModel(application: Application) : AndroidViewModel(application) 
 
     fun addNormalSample(sample: SampleEntity) {
         viewModelScope.launch {
-            database.sampleDao().insert(sample)
-            loadAll()
+            try {
+                database.sampleDao().insert(sample)
+                loadAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     fun updateNormalSample(sample: SampleEntity) {
         viewModelScope.launch {
-            database.sampleDao().update(sample)
-            _uiState.value = _uiState.value.copy(editingNormalSample = null, showNormalDialog = false)
-            loadAll()
+            try {
+                database.sampleDao().update(sample)
+                loadAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     fun deleteNormalSample(id: Long) {
         viewModelScope.launch {
-            database.sampleDao().deleteSample(id)
-            loadAll()
+            try {
+                database.sampleDao().deleteSample(id)
+                loadAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     fun addDrillSample(sample: DrillSampleEntity) {
         viewModelScope.launch {
-            database.drillSampleDao().insert(sample)
-            loadAll()
+            try {
+                database.drillSampleDao().insert(sample)
+                loadAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     fun updateDrillSample(sample: DrillSampleEntity) {
         viewModelScope.launch {
-            database.drillSampleDao().update(sample)
-            _uiState.value = _uiState.value.copy(editingDrillSample = null, showDrillDialog = false)
-            loadAll()
+            try {
+                database.drillSampleDao().update(sample)
+                loadAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     fun deleteDrillSample(id: Long) {
         viewModelScope.launch {
-            database.drillSampleDao().deleteSample(id)
-            loadAll()
+            try {
+                database.drillSampleDao().deleteSample(id)
+                loadAll()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -125,7 +147,6 @@ class SampleViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun exportSamples(type: String): String {
-        // 导出功能 - 返回CSV或JSON格式的字符串
         val sb = StringBuilder()
         when (type) {
             "normal" -> {

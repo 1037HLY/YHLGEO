@@ -4,7 +4,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.os.Build
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,25 +15,24 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
-import java.util.*
+import kotlin.math.sqrt
 
 @Composable
 fun SensorScreen() {
     val context = LocalContext.current
     val sensorManager = remember { context.getSystemService(android.content.Context.SENSOR_SERVICE) as SensorManager }
     
-    // 传感器数据状态
     var accelerometerData by remember { mutableStateOf(listOf<Float>()) }
     var gyroscopeData by remember { mutableStateOf(listOf<Float>()) }
     var magnetometerData by remember { mutableStateOf(listOf<Float>()) }
-    var maxDataPoints = 60
+    val maxDataPoints = 60
 
-    // 传感器监听器
     DisposableEffect(Unit) {
         val accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         val gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
@@ -44,7 +42,7 @@ fun SensorScreen() {
             override fun onSensorChanged(event: SensorEvent) {
                 when (event.sensor.type) {
                     Sensor.TYPE_ACCELEROMETER -> {
-                        val magnitude = kotlin.math.sqrt(
+                        val magnitude = sqrt(
                             event.values[0] * event.values[0] +
                             event.values[1] * event.values[1] +
                             event.values[2] * event.values[2]
@@ -52,7 +50,7 @@ fun SensorScreen() {
                         accelerometerData = (accelerometerData + magnitude).takeLast(maxDataPoints)
                     }
                     Sensor.TYPE_GYROSCOPE -> {
-                        val magnitude = kotlin.math.sqrt(
+                        val magnitude = sqrt(
                             event.values[0] * event.values[0] +
                             event.values[1] * event.values[1] +
                             event.values[2] * event.values[2]
@@ -60,7 +58,7 @@ fun SensorScreen() {
                         gyroscopeData = (gyroscopeData + magnitude).takeLast(maxDataPoints)
                     }
                     Sensor.TYPE_MAGNETIC_FIELD -> {
-                        val magnitude = kotlin.math.sqrt(
+                        val magnitude = sqrt(
                             event.values[0] * event.values[0] +
                             event.values[1] * event.values[1] +
                             event.values[2] * event.values[2]
@@ -73,7 +71,6 @@ fun SensorScreen() {
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
 
-        // 注册传感器监听
         accelerometerSensor?.let {
             sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
         }
@@ -110,7 +107,6 @@ fun SensorScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 加速度计曲线
         SensorCurveCard(
             title = "加速度计",
             data = accelerometerData,
@@ -120,7 +116,6 @@ fun SensorScreen() {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 陀螺仪曲线
         SensorCurveCard(
             title = "陀螺仪",
             data = gyroscopeData,
@@ -130,7 +125,6 @@ fun SensorScreen() {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 磁力计曲线
         SensorCurveCard(
             title = "磁力计",
             data = magnetometerData,
@@ -182,7 +176,6 @@ fun SensorCurveCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // 曲线图
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -211,45 +204,26 @@ fun SensorCurveCard(
                         }
                     }
 
-                    // 绘制曲线阴影
-                    val shadowPath = Path().apply {
-                        path.forEach { point ->
-                            if (point == path.iterator().first()) {
-                                moveTo(point.x, point.y)
-                            } else {
-                                lineTo(point.x, point.y)
-                            }
-                        }
-                        lineTo(width - padding, height - padding)
-                        lineTo(padding, height - padding)
-                        close()
-                    }
-                    drawPath(
-                        path = shadowPath,
-                        color = color.copy(alpha = 0.1f),
-                        style = Stroke(width = 0f)
-                    )
-
-                    // 绘制曲线
                     drawPath(
                         path = path,
                         color = color,
                         style = Stroke(width = 3f)
                     )
                 } else {
-                    // 无数据时显示提示
-                    val paint = android.graphics.Paint().apply {
-                        color = android.graphics.Color.parseColor("#94A3B8")
-                        textSize = 28f
-                        isAntiAlias = true
-                        textAlign = android.graphics.Paint.Align.CENTER
+                    drawIntoCanvas { canvas ->
+                        val paint = android.graphics.Paint().apply {
+                            color = android.graphics.Color.parseColor("#94A3B8")
+                            textSize = 28f
+                            isAntiAlias = true
+                            textAlign = android.graphics.Paint.Align.CENTER
+                        }
+                        canvas.nativeCanvas.drawText(
+                            "等待数据...",
+                            width / 2,
+                            height / 2 + 10,
+                            paint
+                        )
                     }
-                    drawContext.canvas.nativeCanvas.drawText(
-                        "等待数据...",
-                        width / 2,
-                        height / 2 + 10,
-                        paint
-                    )
                 }
             }
         }

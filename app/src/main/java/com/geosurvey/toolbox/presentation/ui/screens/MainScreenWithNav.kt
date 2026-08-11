@@ -33,7 +33,8 @@ fun MainScreenWithNav(
     onAttitudeClick: () -> Unit,
     onAnalysisClick: () -> Unit,
     onSampleClick: () -> Unit,
-    onCameraPageClick: () -> Unit
+    onCameraPageClick: () -> Unit,
+    onSensorClick: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
@@ -91,6 +92,18 @@ fun MainScreenWithNav(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 }
                 )
+                NavigationBarItem(
+                    icon = {
+                        if (selectedTab == 4) {
+                            Icon(Icons.Filled.ShowChart, contentDescription = "传感器")
+                        } else {
+                            Icon(Icons.Outlined.ShowChart, contentDescription = "传感器")
+                        }
+                    },
+                    label = { Text("传感器", fontSize = 10.sp) },
+                    selected = selectedTab == 4,
+                    onClick = { selectedTab = 4 }
+                )
             }
         }
     ) { paddingValues ->
@@ -119,6 +132,7 @@ fun MainScreenWithNav(
                 )
                 2 -> SampleScreenPlaceholder(onSampleClick = onSampleClick)
                 3 -> CameraScreenPlaceholder(onCameraClick = onCameraPageClick)
+                4 -> SensorScreenPlaceholder(onSensorClick = onSensorClick)
             }
         }
     }
@@ -145,9 +159,11 @@ fun LocationAndTrackScreen(
     ) {
         // GPS定位卡片
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCardClick() },
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFE8F0FE).copy(alpha = 0.7f)
+                containerColor = Color(0xCCFFFFFF)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
@@ -200,14 +216,6 @@ fun LocationAndTrackScreen(
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8)
                     )
-                    if (gnssData.totalCount > 0) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "👆 点击查看卫星详情",
-                            fontSize = 12.sp,
-                            color = Color(0xFF0EA5E9)
-                        )
-                    }
                 } else {
                     Text(
                         text = "🛰️ 正在搜索卫星信号...",
@@ -230,7 +238,7 @@ fun LocationAndTrackScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFECFDF5).copy(alpha = 0.7f)
+                containerColor = Color(0xCCFFFFFF)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
@@ -306,14 +314,13 @@ fun AttitudeAndAnalysisScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // 产状测量卡片
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp)
+                .height(160.dp)
                 .clickable { onAttitudeClick() },
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF5F3FF).copy(alpha = 0.6f)
+                containerColor = Color(0xCCFFFFFF)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
@@ -325,7 +332,7 @@ fun AttitudeAndAnalysisScreen(
             ) {
                 Text(
                     text = "🔬 产状测量",
-                    fontSize = 18.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF8B5CF6)
                 )
@@ -335,19 +342,24 @@ fun AttitudeAndAnalysisScreen(
                     fontSize = 14.sp,
                     color = Color(0xFF475569)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "将手机贴合岩面测量",
+                    fontSize = 12.sp,
+                    color = Color(0xFF94A3B8)
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 地质分析卡片
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp)
+                .height(160.dp)
                 .clickable { onAnalysisClick() },
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFFEF3C7).copy(alpha = 0.6f)
+                containerColor = Color(0xCCFFFFFF)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
@@ -359,7 +371,7 @@ fun AttitudeAndAnalysisScreen(
             ) {
                 Text(
                     text = "📊 地质分析",
-                    fontSize = 18.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFFD97706)
                 )
@@ -368,6 +380,12 @@ fun AttitudeAndAnalysisScreen(
                     text = "赤平投影 · 玫瑰花图 · 统计分析",
                     fontSize = 14.sp,
                     color = Color(0xFF475569)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "自动生成专业地质图件",
+                    fontSize = 12.sp,
+                    color = Color(0xFF94A3B8)
                 )
             }
         }
@@ -387,7 +405,7 @@ fun SampleScreenPlaceholder(onSampleClick: () -> Unit) {
                 .height(200.dp)
                 .clickable { onSampleClick() },
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFD1FAE5).copy(alpha = 0.6f)
+                containerColor = Color(0xCCFFFFFF)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
@@ -433,7 +451,7 @@ fun CameraScreenPlaceholder(onCameraClick: () -> Unit) {
                 .height(200.dp)
                 .clickable { onCameraClick() },
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFFFF3E0).copy(alpha = 0.6f)
+                containerColor = Color(0xCCFFFFFF)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
@@ -458,6 +476,52 @@ fun CameraScreenPlaceholder(onCameraClick: () -> Unit) {
                 )
                 Text(
                     text = "拍照并叠加坐标/时间/产状水印",
+                    fontSize = 14.sp,
+                    color = Color(0xFF94A3B8)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SensorScreenPlaceholder(onSensorClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clickable { onSensorClick() },
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xCCFFFFFF)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "📊 传感器数据",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF8B5CF6)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "点击查看实时传感器曲线",
+                    fontSize = 16.sp,
+                    color = Color(0xFF475569)
+                )
+                Text(
+                    text = "加速度计 · 陀螺仪 · 磁力计",
                     fontSize = 14.sp,
                     color = Color(0xFF94A3B8)
                 )

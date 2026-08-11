@@ -58,9 +58,6 @@ class LocationHelper(private val context: Context) {
             return
         }
 
-        // 检查GPS是否开启
-        val gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-
         try {
             // 1. 使用FusedLocationProviderClient（更快速、更省电）
             if (fusedLocationClient != null) {
@@ -275,7 +272,7 @@ class LocationHelper(private val context: Context) {
         )
     }
 
-    private function parseGnssStatus(status: GnssStatus): GnssStatusData {
+    private fun parseGnssStatus(status: GnssStatus): GnssStatusData {
         val satellites = mutableListOf<SatelliteDetail>()
         for (i in 0 until status.satelliteCount) {
             val constellation = when (status.getConstellationType(i)) {

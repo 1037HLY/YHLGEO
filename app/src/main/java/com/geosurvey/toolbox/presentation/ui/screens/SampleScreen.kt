@@ -33,6 +33,7 @@ fun SampleScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showExportDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -64,33 +65,37 @@ fun SampleScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 上下两个窗口使用 TabRow 切换
-        var selectedTab by remember { mutableStateOf(0) }
-        TabRow(
+        // 使用 ScrollableTabRow 替代 TabRow
+        ScrollableTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color(0xFFF1F5F9),
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    height = 3.dp,
-                    color = Color(0xFF0EA5E9)
-                )
-            }
+            edgePadding = 0.dp
         ) {
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text("普通样本", color = if (selectedTab == 0) Color(0xFF0EA5E9) else Color(0xFF475569)) }
+                text = { 
+                    Text(
+                        "普通样本", 
+                        color = if (selectedTab == 0) Color(0xFF0EA5E9) else Color(0xFF475569)
+                    )
+                }
             )
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { Text("钻孔样本", color = if (selectedTab == 1) Color(0xFF0EA5E9) else Color(0xFF475569)) }
+                text = { 
+                    Text(
+                        "钻孔样本", 
+                        color = if (selectedTab == 1) Color(0xFF0EA5E9) else Color(0xFF475569)
+                    )
+                }
             )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // 内容区域
         when (selectedTab) {
             0 -> NormalSampleList(viewModel, uiState.normalSamples)
             1 -> DrillSampleList(viewModel, uiState.drillSamples)

@@ -1,12 +1,15 @@
 package com.geosurvey.toolbox.presentation
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 
 class LocationHelper(private val context: Context) {
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -15,6 +18,14 @@ class LocationHelper(private val context: Context) {
     private var onLocationUpdate: ((Location) -> Unit)? = null
     private var onGnssStatusUpdate: ((GnssStatusData) -> Unit)? = null
     private var isListening = false
+
+    // 检查是否有定位权限
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
 
     fun startLocationUpdates(
         onLocationUpdate: (Location) -> Unit,
@@ -27,7 +38,22 @@ class LocationHelper(private val context: Context) {
             return
         }
 
+        // 检查权限
+        if (!hasLocationPermission()) {
+            // 没有权限，发送空位置
+            onLocationUpdate(Location(LocationManager.GPS_PROVIDER))
+            return
+        }
+
+        // 检查GPS是否开启
+        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            // GPS未开启，发送空位置
+            onLocationUpdate(Location(LocationManager.GPS_PROVIDER))
+            return
+        }
+
         try {
+            // 位置监听
             locationListener = object : LocationListener {
                 override fun onLocationChanged(location: Location) {
                     onLocationUpdate(location)
@@ -36,18 +62,35 @@ class LocationHelper(private val context: Context) {
                 override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
 
                 @Suppress("DEPRECATION")
-                override fun onProviderEnabled(provider: String) {}
+                override fun onProviderEnabled(provider: String) {
+                    // 提供者启用
+                }
 
                 @Suppress("DEPRECATION")
-                override fun onProviderDisabled(provider: String) {}
+                override fun onProviderDisabled(provider: String) {
+                    // 提供者禁用
+                }
             }
 
+            // 请求位置更新
             locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
                 1000L,
                 1f,
                 locationListener!!
             )
+
+            // 同时请求网络定位作为备选
+            try {
+                locationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    2000L,
+                    10f,
+                    locationListener!!
+                )
+            } catch (e: Exception) {
+                // 网络定位可能不可用，忽略
+            }
 
             // GNSS状态监听 (Android 7.0+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -59,11 +102,10 @@ class LocationHelper(private val context: Context) {
                 }
                 locationManager.registerGnssStatusCallback(gnssStatusListener!!)
             } else {
-                // 旧版本使用GpsStatus - 使用数字常量
+                // 旧版本使用GpsStatus
                 @Suppress("DEPRECATION")
                 locationManager.addGpsStatusListener { event ->
-                    // 1 = GPS_EVENT_SATELLITE_STATUS
-                    if (event == 1) {
+                    if (event == 1) { // GPS_EVENT_SATELLITE_STATUS
                         @Suppress("DEPRECATION")
                         val gpsStatus = locationManager.getGpsStatus(null)
                         if (gpsStatus != null) {
@@ -75,6 +117,16 @@ class LocationHelper(private val context: Context) {
             }
 
             isListening = true
+
+            // 发送一个初始位置（如果有缓存位置）
+            try {
+                val lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                lastLocation?.let {
+                    onLocationUpdate(it)
+                }
+            } catch (e: Exception) {
+                // 忽略
+            }
 
         } catch (e: SecurityException) {
             e.printStackTrace()
@@ -156,3 +208,22 @@ class LocationHelper(private val context: Context) {
         )
     }
 }
+
+// 数据类
+data class GnssStatusData(
+    val satellites: List<SatelliteDetail>,
+    val usedCount: Int,
+    val totalCount: Int,
+    val hdop: Float,
+    val vdop: Float,
+    val pdop: Float
+)
+
+data class SatelliteDetail(
+    val prn: Int,
+    val constellation: String,
+    val snr: Float,
+    val azimuth: Float,
+    val elevation: Float,
+    val usedInFix: Boolean
+)

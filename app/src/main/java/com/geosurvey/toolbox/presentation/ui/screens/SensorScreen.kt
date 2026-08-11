@@ -209,9 +209,10 @@ fun SensorCurveCard(
                         style = Stroke(width = 3f)
                     )
                 } else {
+                    // 修复：使用正确的方式绘制文字
                     drawIntoCanvas { canvas ->
                         val paint = android.graphics.Paint().apply {
-                            color = android.graphics.Color.parseColor("#94A3B8")
+                            color = 0xFF94A3B8.toInt()  // 使用Int值
                             textSize = 28f
                             isAntiAlias = true
                             textAlign = android.graphics.Paint.Align.CENTER

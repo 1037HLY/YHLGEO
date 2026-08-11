@@ -65,7 +65,7 @@ fun SampleScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 使用 ScrollableTabRow 替代 TabRow
+        // 使用 ScrollableTabRow
         ScrollableTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color(0xFFF1F5F9),
@@ -74,9 +74,9 @@ fun SampleScreen(
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { 
+                text = {
                     Text(
-                        "普通样本", 
+                        "普通样本",
                         color = if (selectedTab == 0) Color(0xFF0EA5E9) else Color(0xFF475569)
                     )
                 }
@@ -84,9 +84,9 @@ fun SampleScreen(
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { 
+                text = {
                     Text(
-                        "钻孔样本", 
+                        "钻孔样本",
                         color = if (selectedTab == 1) Color(0xFF0EA5E9) else Color(0xFF475569)
                     )
                 }
@@ -95,27 +95,32 @@ fun SampleScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 内容区域
-        when (selectedTab) {
-            0 -> NormalSampleList(viewModel, uiState.normalSamples)
-            1 -> DrillSampleList(viewModel, uiState.drillSamples)
-        }
-
-        // 添加按钮
-        FloatingActionButton(
-            onClick = {
-                if (selectedTab == 0) {
-                    viewModel.startEditNormal(SampleEntity())
-                } else {
-                    viewModel.startEditDrill(DrillSampleEntity())
-                }
-            },
-            containerColor = Color(0xFF0EA5E9),
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(16.dp)
+        // 使用 Box 包裹内容和FAB按钮
+        Box(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Icon(Icons.Default.Add, contentDescription = "添加", tint = Color.White)
+            // 内容区域
+            when (selectedTab) {
+                0 -> NormalSampleList(viewModel, uiState.normalSamples)
+                1 -> DrillSampleList(viewModel, uiState.drillSamples)
+            }
+
+            // 添加按钮 - 右下角
+            FloatingActionButton(
+                onClick = {
+                    if (selectedTab == 0) {
+                        viewModel.startEditNormal(SampleEntity())
+                    } else {
+                        viewModel.startEditDrill(DrillSampleEntity())
+                    }
+                },
+                containerColor = Color(0xFF0EA5E9),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "添加", tint = Color.White)
+            }
         }
     }
 

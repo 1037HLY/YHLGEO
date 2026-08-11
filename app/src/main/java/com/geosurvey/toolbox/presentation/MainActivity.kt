@@ -12,7 +12,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,7 +21,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -175,12 +174,10 @@ class MainActivity : ComponentActivity() {
                             onBack = { showAttitude = false }
                         )
                     } else if (showMap) {
-                        // 获取选中的轨迹ID - 使用第一个有数据的轨迹
                         val trackIds = trackingState.trackList.map { it.trackId }
                         val selectedTrackId = trackIds.firstOrNull()
                         var trackPoints by remember { mutableStateOf(emptyList<TrackPointEntity>()) }
                         
-                        // 使用 LaunchedEffect 加载轨迹点
                         LaunchedEffect(selectedTrackId) {
                             if (selectedTrackId != null) {
                                 try {
@@ -294,14 +291,12 @@ fun MainScreen(
     onSampleClick: () -> Unit,
     onCameraPageClick: () -> Unit
 ) {
-    // 使用 verticalScroll 使主页可以上下滑动
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .background(Color(0xFFF8FAFC))
-            .padding(horizontal = 24.dp)
-            .padding(top = 24.dp, bottom = 24.dp),
+            .padding(24.dp)
+            .padding(bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(

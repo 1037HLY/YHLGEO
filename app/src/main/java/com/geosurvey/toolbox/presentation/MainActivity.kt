@@ -64,6 +64,22 @@ class MainActivity : ComponentActivity() {
             window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
         }
 
+        // 主动请求权限（首次打开直接弹出权限对话框）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val permissions = listOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+            val needRequest = permissions.filter {
+                ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+            }
+            if (needRequest.isNotEmpty()) {
+                requestPermissions(needRequest.toTypedArray(), 100)
+            }
+        }
+
         locationHelper = LocationHelper(this)
 
         trackingReceiver = object : BroadcastReceiver() {
@@ -174,10 +190,12 @@ class MainActivity : ComponentActivity() {
                             onBack = { showAttitude = false }
                         )
                     } else if (showMap) {
+                        // 获取选中的轨迹ID - 使用第一个有数据的轨迹
                         val trackIds = trackingState.trackList.map { it.trackId }
                         val selectedTrackId = trackIds.firstOrNull()
                         var trackPoints by remember { mutableStateOf(emptyList<TrackPointEntity>()) }
                         
+                        // 使用 LaunchedEffect 加载轨迹点
                         LaunchedEffect(selectedTrackId) {
                             if (selectedTrackId != null) {
                                 try {
@@ -269,6 +287,18 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         locationHelper.stopLocationUpdates()
         trackingReceiver?.let { unregisterReceiver(it) }
+    }
+
+    // 处理权限请求结果
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 100) {
+            // 权限请求结果已由LaunchedEffect处理
+        }
     }
 }
 

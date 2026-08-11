@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.geosurvey.toolbox.data.database.DrillSampleEntity
 import com.geosurvey.toolbox.data.database.SampleEntity
+import com.geosurvey.toolbox.presentation.ui.components.ShareDialog
 import com.geosurvey.toolbox.presentation.viewmodel.SampleViewModel
 import java.io.File
 
@@ -38,6 +39,9 @@ fun SampleScreen(
     var showFileNameDialog by remember { mutableStateOf(false) }
     var fileNameInput by remember { mutableStateOf("") }
     var exportType by remember { mutableStateOf("all") }
+    var showShareDialog by remember { mutableStateOf(false) }
+    var exportedFile by remember { mutableStateOf<File?>(null) }
+    var exportedFileName by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -149,13 +153,29 @@ fun SampleScreen(
                 try {
                     val file = File(context.filesDir, "$fileNameInput.csv")
                     file.writeText(data)
-                    Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
+                    exportedFile = file
+                    exportedFileName = "${fileNameInput}.csv"
+                    showFileNameDialog = false
+                    showShareDialog = true
+                    Toast.makeText(context, "导出成功!", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                    showFileNameDialog = false
                 }
-                showFileNameDialog = false
             },
             onDismiss = { showFileNameDialog = false }
+        )
+    }
+
+    // 分享对话框
+    if (showShareDialog && exportedFile != null) {
+        ShareDialog(
+            file = exportedFile!!,
+            fileName = exportedFileName,
+            onDismiss = { 
+                showShareDialog = false
+                exportedFile = null
+            }
         )
     }
 

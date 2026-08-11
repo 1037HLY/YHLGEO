@@ -12,28 +12,38 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.geosurvey.toolbox.data.database.TrackPointEntity
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
+import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
 import com.geosurvey.toolbox.presentation.ui.screens.AnalysisScreen
 import com.geosurvey.toolbox.presentation.ui.screens.AttitudeScreen
 import com.geosurvey.toolbox.presentation.ui.screens.CameraPageScreen
 import com.geosurvey.toolbox.presentation.ui.screens.MainScreenWithNav
 import com.geosurvey.toolbox.presentation.ui.screens.MapScreen
+import com.geosurvey.toolbox.presentation.ui.screens.SampleScreen
 import com.geosurvey.toolbox.presentation.ui.screens.SampleScreenV2
 import com.geosurvey.toolbox.presentation.ui.screens.SensorScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
 import com.geosurvey.toolbox.presentation.viewmodel.AnalysisViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.AttitudeViewModel
 import com.geosurvey.toolbox.presentation.viewmodel.SampleViewModel
+import com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState
 import com.geosurvey.toolbox.presentation.viewmodel.TrackingViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -48,7 +58,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 启用全屏手势支持
+        // 启用全屏手势支持（边缘滑动返回）
         WindowCompat.setDecorFitsSystemWindows(window, false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
@@ -57,7 +67,7 @@ class MainActivity : ComponentActivity() {
             window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
         }
 
-        // 主动请求权限
+        // 主动请求权限（首次打开直接弹出权限对话框）
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val permissions = listOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -124,9 +134,9 @@ class MainActivity : ComponentActivity() {
                     var isSearching by remember { mutableStateOf(true) }
                     var gnssData by remember { mutableStateOf(GnssStatusData(emptyList(), 0, 0, 0f, 0f, 0f)) }
                     var timeText by remember { mutableStateOf("--:--:--") }
-                    
-                    // 页面状态
                     var showDialog by remember { mutableStateOf(false) }
+                    
+                    // 子页面状态
                     var showTrackList by remember { mutableStateOf(false) }
                     var showMap by remember { mutableStateOf(false) }
                     var showAttitude by remember { mutableStateOf(false) }
@@ -134,7 +144,6 @@ class MainActivity : ComponentActivity() {
                     var showSample by remember { mutableStateOf(false) }
                     var showCameraPage by remember { mutableStateOf(false) }
                     var showSensor by remember { mutableStateOf(false) }
-                    var currentTab by remember { mutableStateOf(0) }
 
                     LaunchedEffect(hasPermission) {
                         if (hasPermission) {
@@ -155,161 +164,110 @@ class MainActivity : ComponentActivity() {
                     val trackingViewModel: TrackingViewModel = viewModel()
                     val trackingState by trackingViewModel.uiState.collectAsState()
 
-                    // 处理返回逻辑 - 返回到主页并保持当前tab
-                    fun navigateBack() {
-                        showTrackList = false
-                        showMap = false
-                        showAttitude = false
-                        showAnalysis = false
-                        showSample = false
-                        showCameraPage = false
-                        showSensor = false
-                    }
-
-                    // 页面切换
-                    when {
-                        showSensor -> {
-                            SensorScreen()
+                    // 页面切换 - 子页面优先显示
+                    if (showSensor) {
+                        SensorScreen()
+                    } else if (showSample) {
+                        val sampleViewModel: SampleViewModel = viewModel()
+                        LaunchedEffect(location) {
+                            location?.let { sampleViewModel.updateLocation(it) }
                         }
-                        showSample -> {
-                            val sampleViewModel: SampleViewModel = viewModel()
-                            LaunchedEffect(location) {
-                                location?.let { sampleViewModel.updateLocation(it) }
+                        SampleScreenV2(
+                            viewModel = sampleViewModel,
+                            onBack = { showSample = false }
+                        )
+                    } else if (showCameraPage) {
+                        CameraPageScreen(
+                            onBack = { showCameraPage = false }
+                        )
+                    } else if (showAnalysis) {
+                        val analysisViewModel: AnalysisViewModel = viewModel()
+                        AnalysisScreen(
+                            viewModel = analysisViewModel,
+                            onBack = { showAnalysis = false }
+                        )
+                    } else if (showAttitude) {
+                        val attitudeViewModel: AttitudeViewModel = viewModel()
+                        LaunchedEffect(location) {
+                            location?.let {
+                                attitudeViewModel.updateLocation(it)
                             }
-                            SampleScreenV2(
-                                viewModel = sampleViewModel,
-                                onBack = { 
-                                    showSample = false
-                                    currentTab = 2 // 保持在样本tab
-                                }
-                            )
                         }
-                        showCameraPage -> {
-                            CameraPageScreen(
-                                onBack = { 
-                                    showCameraPage = false
-                                    currentTab = 3
-                                }
-                            )
-                        }
-                        showAnalysis -> {
-                            val analysisViewModel: AnalysisViewModel = viewModel()
-                            AnalysisScreen(
-                                viewModel = analysisViewModel,
-                                onBack = { 
-                                    showAnalysis = false
-                                    currentTab = 1
-                                }
-                            )
-                        }
-                        showAttitude -> {
-                            val attitudeViewModel: AttitudeViewModel = viewModel()
-                            LaunchedEffect(location) {
-                                location?.let {
-                                    attitudeViewModel.updateLocation(it)
-                                }
-                            }
-                            AttitudeScreen(
-                                viewModel = attitudeViewModel,
-                                onBack = { 
-                                    showAttitude = false
-                                    currentTab = 1
-                                }
-                            )
-                        }
-                        showMap -> {
-                            val trackIds = trackingState.trackList.map { it.trackId }
-                            val selectedTrackId = trackIds.firstOrNull()
-                            var trackPoints by remember { mutableStateOf(emptyList<TrackPointEntity>()) }
-                            
-                            LaunchedEffect(selectedTrackId) {
-                                if (selectedTrackId != null) {
-                                    try {
-                                        trackPoints = trackingViewModel.getTrackPoints(selectedTrackId)
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                        trackPoints = emptyList()
-                                    }
-                                } else {
+                        AttitudeScreen(
+                            viewModel = attitudeViewModel,
+                            onBack = { showAttitude = false }
+                        )
+                    } else if (showMap) {
+                        val trackIds = trackingState.trackList.map { it.trackId }
+                        val selectedTrackId = trackIds.firstOrNull()
+                        var trackPoints by remember { mutableStateOf(emptyList<TrackPointEntity>()) }
+                        
+                        LaunchedEffect(selectedTrackId) {
+                            if (selectedTrackId != null) {
+                                try {
+                                    trackPoints = trackingViewModel.getTrackPoints(selectedTrackId)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
                                     trackPoints = emptyList()
                                 }
+                            } else {
+                                trackPoints = emptyList()
                             }
-                            
-                            MapScreen(
-                                trackPoints = trackPoints,
-                                currentLocation = location,
-                                onBack = { 
-                                    showMap = false
-                                    currentTab = 0
-                                },
-                                onCenterLocation = {
-                                    // 定位到当前位置
-                                }
-                            )
                         }
-                        showTrackList -> {
-                            TrackListScreen(
-                                tracks = trackingState.trackList,
-                                onTrackClick = { trackId ->
-                                    showMap = true
-                                },
-                                onDeleteTrack = { trackId ->
-                                    trackingViewModel.deleteTrack(trackId)
-                                },
-                                onBack = { 
-                                    showTrackList = false
-                                    currentTab = 0
+                        
+                        MapScreen(
+                            trackPoints = trackPoints,
+                            currentLocation = location,
+                            onBack = { showMap = false },
+                            onCenterLocation = {
+                                // 定位到当前位置
+                            }
+                        )
+                    } else if (showTrackList) {
+                        TrackListScreen(
+                            tracks = trackingState.trackList,
+                            onTrackClick = { trackId ->
+                                showMap = true
+                            },
+                            onDeleteTrack = { trackId ->
+                                trackingViewModel.deleteTrack(trackId)
+                            },
+                            onBack = { showTrackList = false }
+                        )
+                    } else {
+                        // 主界面 - 使用底部导航
+                        MainScreenWithNav(
+                            hasPermission = hasPermission,
+                            onRequestPermission = {
+                                permissionsState.launchMultiplePermissionRequest()
+                            },
+                            location = location,
+                            isSearching = isSearching,
+                            gnssData = gnssData,
+                            timeText = timeText,
+                            onCardClick = {
+                                // 点击GPS卡片打开卫星详情
+                                if (!isSearching && location != null) {
+                                    showDialog = true
                                 }
-                            )
-                        }
-                        else -> {
-                            // 主页 - 使用底部导航
-                            MainScreenWithNav(
-                                hasPermission = hasPermission,
-                                onRequestPermission = {
-                                    permissionsState.launchMultiplePermissionRequest()
-                                },
-                                location = location,
-                                isSearching = isSearching,
-                                gnssData = gnssData,
-                                timeText = timeText,
-                                onCardClick = {
-                                    if (!isSearching && location != null) {
-                                        showDialog = true
-                                    }
-                                },
-                                trackingState = trackingState,
-                                onStartTracking = {
-                                    trackingViewModel.startRecording()
-                                },
-                                onStopTracking = {
-                                    trackingViewModel.stopRecording()
-                                },
-                                onViewTracks = {
-                                    trackingViewModel.loadAllTracks()
-                                    showTrackList = true
-                                },
-                                onAttitudeClick = { 
-                                    showAttitude = true 
-                                },
-                                onAnalysisClick = { 
-                                    showAnalysis = true 
-                                },
-                                onSampleClick = { 
-                                    showSample = true 
-                                },
-                                onCameraPageClick = { 
-                                    showCameraPage = true 
-                                },
-                                onSensorClick = {
-                                    showSensor = true
-                                },
-                                initialTab = currentTab,
-                                onTabChange = { newTab ->
-                                    currentTab = newTab
-                                }
-                            )
-                        }
+                            },
+                            trackingState = trackingState,
+                            onStartTracking = {
+                                trackingViewModel.startRecording()
+                            },
+                            onStopTracking = {
+                                trackingViewModel.stopRecording()
+                            },
+                            onViewTracks = {
+                                trackingViewModel.loadAllTracks()
+                                showTrackList = true
+                            },
+                            onAttitudeClick = { showAttitude = true },
+                            onAnalysisClick = { showAnalysis = true },
+                            onSampleClick = { showSample = true },
+                            onCameraPageClick = { showCameraPage = true },
+                            onSensorClick = { showSensor = true }
+                        )
                     }
 
                     if (showDialog) {
@@ -329,11 +287,15 @@ class MainActivity : ComponentActivity() {
         trackingReceiver?.let { unregisterReceiver(it) }
     }
 
+    // 处理权限请求结果
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 100) {
+            // 权限请求结果已由LaunchedEffect处理
+        }
     }
 }

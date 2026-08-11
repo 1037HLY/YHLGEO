@@ -12,28 +12,21 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.geosurvey.toolbox.data.database.TrackPointEntity
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
-import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
 import com.geosurvey.toolbox.presentation.ui.screens.AnalysisScreen
 import com.geosurvey.toolbox.presentation.ui.screens.AttitudeScreen
 import com.geosurvey.toolbox.presentation.ui.screens.CameraPageScreen
+import com.geosurvey.toolbox.presentation.ui.screens.MainScreenWithNav
 import com.geosurvey.toolbox.presentation.ui.screens.MapScreen
 import com.geosurvey.toolbox.presentation.ui.screens.SampleScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
@@ -195,7 +188,6 @@ class MainActivity : ComponentActivity() {
                         val selectedTrackId = trackIds.firstOrNull()
                         var trackPoints by remember { mutableStateOf(emptyList<TrackPointEntity>()) }
                         
-                        // 使用 LaunchedEffect 加载轨迹点
                         LaunchedEffect(selectedTrackId) {
                             if (selectedTrackId != null) {
                                 try {
@@ -229,7 +221,8 @@ class MainActivity : ComponentActivity() {
                             onBack = { showTrackList = false }
                         )
                     } else {
-                        MainScreen(
+                        // 使用底部导航的主界面
+                        MainScreenWithNav(
                             hasPermission = hasPermission,
                             onRequestPermission = {
                                 permissionsState.launchMultiplePermissionRequest()
@@ -254,21 +247,10 @@ class MainActivity : ComponentActivity() {
                                 trackingViewModel.loadAllTracks()
                                 showTrackList = true
                             },
-                            onMapClick = {
-                                showMap = true
-                            },
-                            onAttitudeClick = {
-                                showAttitude = true
-                            },
-                            onAnalysisClick = {
-                                showAnalysis = true
-                            },
-                            onSampleClick = {
-                                showSample = true
-                            },
-                            onCameraPageClick = {
-                                showCameraPage = true
-                            }
+                            onAttitudeClick = { showAttitude = true },
+                            onAnalysisClick = { showAnalysis = true },
+                            onSampleClick = { showSample = true },
+                            onCameraPageClick = { showCameraPage = true }
                         )
                     }
 
@@ -299,360 +281,5 @@ class MainActivity : ComponentActivity() {
         if (requestCode == 100) {
             // 权限请求结果已由LaunchedEffect处理
         }
-    }
-}
-
-@Composable
-fun MainScreen(
-    hasPermission: Boolean,
-    onRequestPermission: () -> Unit,
-    location: Location?,
-    isSearching: Boolean,
-    gnssData: GnssStatusData,
-    timeText: String,
-    onCardClick: () -> Unit,
-    trackingState: TrackingUiState,
-    onStartTracking: () -> Unit,
-    onStopTracking: () -> Unit,
-    onViewTracks: () -> Unit,
-    onMapClick: () -> Unit,
-    onAttitudeClick: () -> Unit,
-    onAnalysisClick: () -> Unit,
-    onSampleClick: () -> Unit,
-    onCameraPageClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp)
-            .padding(bottom = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "🏔️ 地质勘查工具箱",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF0F172A)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "GeoSurvey Toolbox v1.0.0",
-            fontSize = 16.sp,
-            color = Color(0xFF475569)
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (!hasPermission) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFFFF3E0).copy(alpha = 0.8f)
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "⚠️ 需要定位权限",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFE65100)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = onRequestPermission,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF0EA5E9)
-                        )
-                    ) {
-                        Text("授予权限")
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // 定位卡片
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onCardClick() },
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFE8F0FE).copy(alpha = 0.7f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "📍 GPS定位",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF0EA5E9)
-                    )
-                    Text(
-                        text = if (isSearching) "🔍 搜索中..." else "✅ 已定位",
-                        fontSize = 14.sp,
-                        color = if (isSearching) Color(0xFFF59E0B) else Color(0xFF10B981)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (!isSearching && location != null) {
-                    val loc = location!!
-                    Text(
-                        text = "经度: %.6f  纬度: %.6f".format(loc.longitude, loc.latitude),
-                        fontSize = 14.sp,
-                        color = Color(0xFF0F172A)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "海拔: %.1fm  速度: %.1fkm/h".format(loc.altitude, loc.speed * 3.6),
-                        fontSize = 14.sp,
-                        color = Color(0xFF475569)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = String.format("精度: %.1fm  🛰️ 卫星: %d 颗", loc.accuracy, gnssData.totalCount),
-                        fontSize = 13.sp,
-                        color = Color(0xFF475569)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "🕐 $timeText",
-                        fontSize = 12.sp,
-                        color = Color(0xFF94A3B8)
-                    )
-                    if (gnssData.totalCount > 0) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "👆 点击查看卫星详情",
-                            fontSize = 12.sp,
-                            color = Color(0xFF0EA5E9)
-                        )
-                    }
-                } else {
-                    Text(
-                        text = "🛰️ 正在搜索卫星信号...",
-                        fontSize = 14.sp,
-                        color = Color(0xFF0EA5E9)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "请确保GPS已开启，并移动到开阔地带",
-                        fontSize = 12.sp,
-                        color = Color(0xFF94A3B8)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 轨迹记录卡片
-        TrackingCard(
-            isRecording = trackingState.isRecording,
-            pointCount = trackingState.pointCount,
-            onStartClick = onStartTracking,
-            onStopClick = onStopTracking,
-            onViewTracksClick = onViewTracks
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 地图卡片
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onMapClick() },
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFE8F0FE).copy(alpha = 0.6f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "🗺️ 轨迹地图",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF0EA5E9)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "查看轨迹路线和当前位置",
-                    fontSize = 14.sp,
-                    color = Color(0xFF475569)
-                )
-                if (trackingState.trackList.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "📋 已有 ${trackingState.trackList.size} 条轨迹",
-                        fontSize = 12.sp,
-                        color = Color(0xFF94A3B8)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 产状测量卡片
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onAttitudeClick() },
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF5F3FF).copy(alpha = 0.6f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "🔬 产状测量",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF8B5CF6)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "测量岩层走向/倾角/倾向",
-                    fontSize = 14.sp,
-                    color = Color(0xFF475569)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 分析工具卡片
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onAnalysisClick() },
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFFEF3C7).copy(alpha = 0.6f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "📊 地质分析",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFD97706)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "赤平投影 · 玫瑰花图 · 统计分析",
-                    fontSize = 14.sp,
-                    color = Color(0xFF475569)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 样本记录卡片
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onSampleClick() },
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFD1FAE5).copy(alpha = 0.6f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "📋 样本记录",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF059669)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "普通样本 · 钻孔样本 · 导出数据",
-                    fontSize = 14.sp,
-                    color = Color(0xFF475569)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 水印相机卡片
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onCameraPageClick() },
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFFFF3E0).copy(alpha = 0.6f)
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "📷 水印相机",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFF59E0B)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "拍照并叠加坐标/时间/产状水印",
-                    fontSize = 14.sp,
-                    color = Color(0xFF475569)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = if (!hasPermission) {
-                "⏳ 请授予定位权限以使用GPS功能"
-            } else if (isSearching) {
-                "🔍 正在搜索GPS信号... 请稍候"
-            } else {
-                "✅ 已获取真实GPS定位数据"
-            },
-            fontSize = 14.sp,
-            color = if (isSearching && hasPermission) Color(0xFFF59E0B) else Color(0xFF10B981)
-        )
     }
 }

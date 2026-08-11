@@ -12,31 +12,23 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.geosurvey.toolbox.data.database.TrackPointEntity
 import com.geosurvey.toolbox.presentation.theme.GeoSurveyTheme
 import com.geosurvey.toolbox.presentation.ui.components.GnssFullScreenDialog
-import com.geosurvey.toolbox.presentation.ui.components.TrackingCard
 import com.geosurvey.toolbox.presentation.ui.screens.AnalysisScreen
 import com.geosurvey.toolbox.presentation.ui.screens.AttitudeScreen
 import com.geosurvey.toolbox.presentation.ui.screens.CameraPageScreen
 import com.geosurvey.toolbox.presentation.ui.screens.MainScreenWithNav
 import com.geosurvey.toolbox.presentation.ui.screens.MapScreen
-import com.geosurvey.toolbox.presentation.ui.screens.SampleScreen
 import com.geosurvey.toolbox.presentation.ui.screens.SampleScreenV2
 import com.geosurvey.toolbox.presentation.ui.screens.SensorScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
@@ -135,8 +127,6 @@ class MainActivity : ComponentActivity() {
                     var gnssData by remember { mutableStateOf(GnssStatusData(emptyList(), 0, 0, 0f, 0f, 0f)) }
                     var timeText by remember { mutableStateOf("--:--:--") }
                     var showDialog by remember { mutableStateOf(false) }
-                    
-                    // 子页面状态
                     var showTrackList by remember { mutableStateOf(false) }
                     var showMap by remember { mutableStateOf(false) }
                     var showAttitude by remember { mutableStateOf(false) }
@@ -164,7 +154,7 @@ class MainActivity : ComponentActivity() {
                     val trackingViewModel: TrackingViewModel = viewModel()
                     val trackingState by trackingViewModel.uiState.collectAsState()
 
-                    // 页面切换 - 子页面优先显示
+                    // 页面切换
                     if (showSensor) {
                         SensorScreen()
                     } else if (showSample) {
@@ -235,7 +225,7 @@ class MainActivity : ComponentActivity() {
                             onBack = { showTrackList = false }
                         )
                     } else {
-                        // 主界面 - 使用底部导航
+                        // 主页面 - 底部导航
                         MainScreenWithNav(
                             hasPermission = hasPermission,
                             onRequestPermission = {
@@ -246,7 +236,6 @@ class MainActivity : ComponentActivity() {
                             gnssData = gnssData,
                             timeText = timeText,
                             onCardClick = {
-                                // 点击GPS卡片打开卫星详情
                                 if (!isSearching && location != null) {
                                     showDialog = true
                                 }
@@ -287,7 +276,6 @@ class MainActivity : ComponentActivity() {
         trackingReceiver?.let { unregisterReceiver(it) }
     }
 
-    // 处理权限请求结果
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,

@@ -23,6 +23,7 @@ import androidx.compose.ui.window.Dialog
 import com.geosurvey.toolbox.data.database.DrillSampleEntity
 import com.geosurvey.toolbox.data.database.SampleEntity
 import com.geosurvey.toolbox.presentation.viewmodel.SampleViewModel
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +35,9 @@ fun SampleScreen(
     val context = LocalContext.current
     var showExportDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) }
+    var showFileNameDialog by remember { mutableStateOf(false) }
+    var fileNameInput by remember { mutableStateOf("") }
+    var exportType by remember { mutableStateOf("all") }
 
     Column(
         modifier = Modifier
@@ -54,7 +58,10 @@ fun SampleScreen(
                 Text("📋 样本记录", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
             }
             Row {
-                IconButton(onClick = { showExportDialog = true }) {
+                IconButton(onClick = { 
+                    showExportDialog = true 
+                    exportType = "all"
+                }) {
                     Icon(Icons.Default.Download, contentDescription = "导出", tint = Color(0xFF0EA5E9))
                 }
                 IconButton(onClick = { viewModel.loadAll() }) {
@@ -65,7 +72,7 @@ fun SampleScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 使用 ScrollableTabRow
+        // Tab切换
         ScrollableTabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color(0xFFF1F5F9),
@@ -95,17 +102,12 @@ fun SampleScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 使用 Box 包裹内容和FAB按钮
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // 内容区域
+        Box(modifier = Modifier.fillMaxSize()) {
             when (selectedTab) {
                 0 -> NormalSampleList(viewModel, uiState.normalSamples)
                 1 -> DrillSampleList(viewModel, uiState.drillSamples)
             }
 
-            // 添加按钮 - 右下角
             FloatingActionButton(
                 onClick = {
                     if (selectedTab == 0) {
@@ -129,18 +131,31 @@ fun SampleScreen(
         ExportDialog(
             onDismiss = { showExportDialog = false },
             onExport = { type ->
-                val data = viewModel.exportSamples(type)
-                val fileName = "samples_${System.currentTimeMillis()}.csv"
+                exportType = type
+                fileNameInput = "samples_${System.currentTimeMillis()}"
+                showFileNameDialog = true
+                showExportDialog = false
+            }
+        )
+    }
+
+    // 自定义文件名对话框
+    if (showFileNameDialog) {
+        FileNameDialog(
+            fileName = fileNameInput,
+            onFileNameChange = { fileNameInput = it },
+            onConfirm = {
+                val data = viewModel.exportSamples(exportType)
                 try {
-                    context.openFileOutput(fileName, Context.MODE_PRIVATE).use {
-                        it.write(data.toByteArray())
-                    }
-                    Toast.makeText(context, "导出成功: $fileName", Toast.LENGTH_SHORT).show()
+                    val file = File(context.filesDir, "$fileNameInput.csv")
+                    file.writeText(data)
+                    Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
                 } catch (e: Exception) {
                     Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-                showExportDialog = false
-            }
+                showFileNameDialog = false
+            },
+            onDismiss = { showFileNameDialog = false }
         )
     }
 
@@ -154,6 +169,7 @@ fun SampleScreen(
                 } else {
                     viewModel.updateNormalSample(sample)
                 }
+                viewModel.closeDialogs()
             },
             onDismiss = { viewModel.closeDialogs() },
             currentLocation = uiState.currentLocation
@@ -170,6 +186,7 @@ fun SampleScreen(
                 } else {
                     viewModel.updateDrillSample(sample)
                 }
+                viewModel.closeDialogs()
             },
             onDismiss = { viewModel.closeDialogs() },
             currentLocation = uiState.currentLocation
@@ -350,6 +367,7 @@ fun NormalSampleDialog(
                     timestamp = if (sample.id == 0L) System.currentTimeMillis() else sample.timestamp
                 )
                 onSave(newSample)
+                onDismiss()
             }) {
                 Text("保存")
             }
@@ -387,7 +405,9 @@ fun DrillSampleDialog(
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.heightIn(max = 400.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 200.dp, max = 450.dp)
             ) {
                 OutlinedTextField(
                     value = sampleNumber,
@@ -397,7 +417,8 @@ fun DrillSampleDialog(
                     singleLine = true
                 )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
                         value = depthFrom,
@@ -415,7 +436,8 @@ fun DrillSampleDialog(
                     )
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
                         value = sampleLength,
@@ -433,7 +455,8 @@ fun DrillSampleDialog(
                     )
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
                         value = recoveryRate,
@@ -451,7 +474,8 @@ fun DrillSampleDialog(
                     )
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
                         value = name,
@@ -468,12 +492,15 @@ fun DrillSampleDialog(
                         singleLine = true
                     )
                 }
+                // 描述输入框 - 增加高度
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("描述") },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 2
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    maxLines = 3
                 )
                 if (currentLocation != null) {
                     Text(
@@ -503,6 +530,7 @@ fun DrillSampleDialog(
                     timestamp = if (sample.id == 0L) System.currentTimeMillis() else sample.timestamp
                 )
                 onSave(newSample)
+                onDismiss()
             }) {
                 Text("保存")
             }
@@ -552,6 +580,51 @@ fun ExportDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+@Composable
+fun FileNameDialog(
+    fileName: String,
+    onFileNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("📝 自定义文件名") },
+        text = {
+            Column {
+                Text("请输入导出文件名：", fontSize = 14.sp, color = Color(0xFF475569))
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = fileName,
+                    onValueChange = onFileNameChange,
+                    label = { Text("文件名") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    trailingIcon = {
+                        Text(".csv", fontSize = 14.sp, color = Color(0xFF94A3B8))
+                    }
+                )
+                Text(
+                    text = "文件将保存为: $fileName.csv",
+                    fontSize = 12.sp,
+                    color = Color(0xFF94A3B8),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("导出")
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("取消")
             }

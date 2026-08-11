@@ -9,17 +9,33 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 
 class LocationHelper(private val context: Context) {
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    private var locationListener: LocationListener? = null
+    private var fusedLocationClient: FusedLocationProviderClient? = null
+    private var locationCallback: LocationCallback? = null
     private var gnssStatusListener: GnssStatus.Callback? = null
     private var onLocationUpdate: ((Location) -> Unit)? = null
     private var onGnssStatusUpdate: ((GnssStatusData) -> Unit)? = null
     private var isListening = false
+    private var isFusedListening = false
 
-    // 检查是否有定位权限
+    init {
+        try {
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+        } catch (e: Exception) {
+            fusedLocationClient = null
+        }
+    }
+
     private fun hasLocationPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             context,
@@ -38,92 +54,107 @@ class LocationHelper(private val context: Context) {
             return
         }
 
-        // 检查权限
         if (!hasLocationPermission()) {
-            // 没有权限，发送空位置
-            onLocationUpdate(Location(LocationManager.GPS_PROVIDER))
             return
         }
 
         // 检查GPS是否开启
-        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            // GPS未开启，发送空位置
-            onLocationUpdate(Location(LocationManager.GPS_PROVIDER))
-            return
-        }
+        val gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
 
         try {
-            // 位置监听
-            locationListener = object : LocationListener {
-                override fun onLocationChanged(location: Location) {
-                    onLocationUpdate(location)
-                }
-
-                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-
-                @Suppress("DEPRECATION")
-                override fun onProviderEnabled(provider: String) {
-                    // 提供者启用
-                }
-
-                @Suppress("DEPRECATION")
-                override fun onProviderDisabled(provider: String) {
-                    // 提供者禁用
-                }
+            // 1. 使用FusedLocationProviderClient（更快速、更省电）
+            if (fusedLocationClient != null) {
+                startFusedLocationUpdates()
             }
 
-            // 请求位置更新
-            locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                1000L,
-                1f,
-                locationListener!!
-            )
+            // 2. 同时使用原生GPS监听（更精准）
+            startNativeGpsUpdates()
 
-            // 同时请求网络定位作为备选
-            try {
-                locationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER,
-                    2000L,
-                    10f,
-                    locationListener!!
-                )
-            } catch (e: Exception) {
-                // 网络定位可能不可用，忽略
-            }
+            // 3. GNSS状态监听
+            startGnssStatusUpdates()
 
-            // GNSS状态监听 (Android 7.0+)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                gnssStatusListener = object : GnssStatus.Callback() {
-                    override fun onSatelliteStatusChanged(status: GnssStatus) {
-                        val data = parseGnssStatus(status)
-                        onGnssStatusUpdate(data)
-                    }
-                }
-                locationManager.registerGnssStatusCallback(gnssStatusListener!!)
-            } else {
-                // 旧版本使用GpsStatus
-                @Suppress("DEPRECATION")
-                locationManager.addGpsStatusListener { event ->
-                    if (event == 1) { // GPS_EVENT_SATELLITE_STATUS
-                        @Suppress("DEPRECATION")
-                        val gpsStatus = locationManager.getGpsStatus(null)
-                        if (gpsStatus != null) {
-                            val data = parseGpsStatus(gpsStatus)
-                            onGnssStatusUpdate(data)
+            isListening = true
+
+            // 4. 发送缓存位置
+            sendLastKnownLocation()
+
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun startFusedLocationUpdates() {
+        if (isFusedListening) return
+        if (!hasLocationPermission()) return
+
+        try {
+            val locationRequest = LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                1000L
+            ).apply {
+                setMinUpdateIntervalMillis(500L)
+                setMinUpdateDistanceMeters(0.5f)
+                setWaitForAccurateLocation(false)
+            }.build()
+
+            locationCallback = object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult) {
+                    locationResult.locations?.let { locations ->
+                        locations.lastOrNull()?.let { location ->
+                            onLocationUpdate?.invoke(location)
                         }
                     }
                 }
             }
 
-            isListening = true
+            fusedLocationClient?.requestLocationUpdates(
+                locationRequest,
+                locationCallback!!,
+                Looper.getMainLooper()
+            )
+            isFusedListening = true
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
-            // 发送一个初始位置（如果有缓存位置）
-            try {
-                val lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                lastLocation?.let {
-                    onLocationUpdate(it)
+    private fun startNativeGpsUpdates() {
+        if (!hasLocationPermission()) return
+
+        try {
+            val nativeListener = object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    onLocationUpdate?.invoke(location)
                 }
+
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+
+                @Suppress("DEPRECATION")
+                override fun onProviderEnabled(provider: String) {}
+
+                @Suppress("DEPRECATION")
+                override fun onProviderDisabled(provider: String) {}
+            }
+
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                500L,
+                0.5f,
+                nativeListener
+            )
+
+            // 网络定位备选
+            try {
+                locationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    1000L,
+                    5f,
+                    nativeListener
+                )
             } catch (e: Exception) {
                 // 忽略
             }
@@ -135,16 +166,84 @@ class LocationHelper(private val context: Context) {
         }
     }
 
+    private fun startGnssStatusUpdates() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                gnssStatusListener = object : GnssStatus.Callback() {
+                    override fun onSatelliteStatusChanged(status: GnssStatus) {
+                        val data = parseGnssStatus(status)
+                        onGnssStatusUpdate?.invoke(data)
+                    }
+                }
+                locationManager.registerGnssStatusCallback(gnssStatusListener!!)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            try {
+                locationManager.addGpsStatusListener { event ->
+                    if (event == 1) {
+                        @Suppress("DEPRECATION")
+                        val gpsStatus = locationManager.getGpsStatus(null)
+                        if (gpsStatus != null) {
+                            val data = parseGpsStatus(gpsStatus)
+                            onGnssStatusUpdate?.invoke(data)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun sendLastKnownLocation() {
+        if (!hasLocationPermission()) return
+
+        try {
+            // 从GPS获取
+            locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let {
+                onLocationUpdate?.invoke(it)
+                return
+            }
+
+            // 从网络获取
+            locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)?.let {
+                onLocationUpdate?.invoke(it)
+                return
+            }
+
+            // 从FusedLocation获取
+            if (fusedLocationClient != null && hasLocationPermission()) {
+                fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+                    location?.let {
+                        onLocationUpdate?.invoke(it)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun stopLocationUpdates() {
         try {
-            locationListener?.let {
-                locationManager.removeUpdates(it)
+            // 停止FusedLocation
+            if (isFusedListening) {
+                locationCallback?.let {
+                    fusedLocationClient?.removeLocationUpdates(it)
+                }
+                isFusedListening = false
             }
+
+            // 停止GNSS状态监听
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 gnssStatusListener?.let {
                     locationManager.unregisterGnssStatusCallback(it)
                 }
             }
+
             isListening = false
         } catch (e: Exception) {
             e.printStackTrace()
@@ -176,7 +275,7 @@ class LocationHelper(private val context: Context) {
         )
     }
 
-    private fun parseGnssStatus(status: GnssStatus): GnssStatusData {
+    private function parseGnssStatus(status: GnssStatus): GnssStatusData {
         val satellites = mutableListOf<SatelliteDetail>()
         for (i in 0 until status.satelliteCount) {
             val constellation = when (status.getConstellationType(i)) {

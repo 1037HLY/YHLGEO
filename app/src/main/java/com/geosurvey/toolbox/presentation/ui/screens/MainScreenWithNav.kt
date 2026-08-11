@@ -1,12 +1,16 @@
 package com.geosurvey.toolbox.presentation.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geosurvey.toolbox.presentation.GnssStatusData
@@ -15,7 +19,6 @@ import com.geosurvey.toolbox.presentation.viewmodel.TrackingUiState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenWithNav(
-    // GPS定位相关
     hasPermission: Boolean,
     onRequestPermission: () -> Unit,
     location: android.location.Location?,
@@ -23,18 +26,13 @@ fun MainScreenWithNav(
     gnssData: GnssStatusData,
     timeText: String,
     onCardClick: () -> Unit,
-    // 轨迹记录相关
     trackingState: TrackingUiState,
     onStartTracking: () -> Unit,
     onStopTracking: () -> Unit,
     onViewTracks: () -> Unit,
-    // 产状测量
     onAttitudeClick: () -> Unit,
-    // 地质分析
     onAnalysisClick: () -> Unit,
-    // 样本记录
     onSampleClick: () -> Unit,
-    // 水印相机
     onCameraPageClick: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
@@ -46,44 +44,48 @@ fun MainScreenWithNav(
                 tonalElevation = 0.dp
             ) {
                 NavigationBarItem(
-                    icon = { 
-                        Icon(
-                            if (selectedTab == 0) Icons.Filled.LocationOn else Icons.Outlined.LocationOn,
-                            contentDescription = "定位与轨迹"
-                        )
+                    icon = {
+                        if (selectedTab == 0) {
+                            Icon(Icons.Filled.LocationOn, contentDescription = "定位与轨迹")
+                        } else {
+                            Icon(Icons.Outlined.LocationOn, contentDescription = "定位与轨迹")
+                        }
                     },
                     label = { Text("定位与轨迹", fontSize = 10.sp) },
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 }
                 )
                 NavigationBarItem(
-                    icon = { 
-                        Icon(
-                            if (selectedTab == 1) Icons.Filled.Explore else Icons.Outlined.Explore,
-                            contentDescription = "产状与分析"
-                        )
+                    icon = {
+                        if (selectedTab == 1) {
+                            Icon(Icons.Filled.Explore, contentDescription = "产状与分析")
+                        } else {
+                            Icon(Icons.Outlined.Explore, contentDescription = "产状与分析")
+                        }
                     },
                     label = { Text("产状与分析", fontSize = 10.sp) },
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 }
                 )
                 NavigationBarItem(
-                    icon = { 
-                        Icon(
-                            if (selectedTab == 2) Icons.Filled.List else Icons.Outlined.List,
-                            contentDescription = "样本记录"
-                        )
+                    icon = {
+                        if (selectedTab == 2) {
+                            Icon(Icons.Filled.List, contentDescription = "样本记录")
+                        } else {
+                            Icon(Icons.Outlined.List, contentDescription = "样本记录")
+                        }
                     },
                     label = { Text("样本记录", fontSize = 10.sp) },
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 }
                 )
                 NavigationBarItem(
-                    icon = { 
-                        Icon(
-                            if (selectedTab == 3) Icons.Filled.PhotoCamera else Icons.Outlined.PhotoCamera,
-                            contentDescription = "水印相机"
-                        )
+                    icon = {
+                        if (selectedTab == 3) {
+                            Icon(Icons.Filled.PhotoCamera, contentDescription = "水印相机")
+                        } else {
+                            Icon(Icons.Outlined.PhotoCamera, contentDescription = "水印相机")
+                        }
                     },
                     label = { Text("水印相机", fontSize = 10.sp) },
                     selected = selectedTab == 3,
@@ -161,7 +163,7 @@ fun LocationAndTrackScreen(
                     Text(
                         text = "📍 GPS定位",
                         fontSize = 18.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF0EA5E9)
                     )
                     Text(
@@ -244,7 +246,7 @@ fun LocationAndTrackScreen(
                     Text(
                         text = "🛣️ 轨迹记录",
                         fontSize = 18.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        fontWeight = FontWeight.SemiBold,
                         color = Color(0xFF10B981)
                     )
                     if (trackingState.isRecording) {
@@ -308,7 +310,8 @@ fun AttitudeAndAnalysisScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp),
+                .height(120.dp)
+                .clickable { onAttitudeClick() },
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFF5F3FF).copy(alpha = 0.6f)
             ),
@@ -317,14 +320,13 @@ fun AttitudeAndAnalysisScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
-                    .clickable { onAttitudeClick() },
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = "🔬 产状测量",
                     fontSize = 18.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF8B5CF6)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -342,7 +344,8 @@ fun AttitudeAndAnalysisScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp),
+                .height(120.dp)
+                .clickable { onAnalysisClick() },
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFFEF3C7).copy(alpha = 0.6f)
             ),
@@ -351,14 +354,13 @@ fun AttitudeAndAnalysisScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
-                    .clickable { onAnalysisClick() },
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = "📊 地质分析",
                     fontSize = 18.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold,
                     color = Color(0xFFD97706)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -399,7 +401,7 @@ fun SampleScreenPlaceholder(onSampleClick: () -> Unit) {
                 Text(
                     text = "📋 样本记录",
                     fontSize = 24.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontWeight = FontWeight.Bold,
                     color = Color(0xFF059669)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -445,7 +447,7 @@ fun CameraScreenPlaceholder(onCameraClick: () -> Unit) {
                 Text(
                     text = "📷 水印相机",
                     fontSize = 24.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontWeight = FontWeight.Bold,
                     color = Color(0xFFF59E0B)
                 )
                 Spacer(modifier = Modifier.height(8.dp))

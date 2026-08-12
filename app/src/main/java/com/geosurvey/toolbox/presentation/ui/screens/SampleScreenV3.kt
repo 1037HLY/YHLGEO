@@ -35,7 +35,7 @@ fun SampleScreenV3(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var expandedSection by remember { mutableStateOf<String?>(null) } // "normal" or "drill"
+    var expandedSection by remember { mutableStateOf<String?>(null) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showNormalDialog by remember { mutableStateOf(false) }
     var showDrillDialog by remember { mutableStateOf(false) }
@@ -262,252 +262,82 @@ fun SampleScreenV3(
 
     // 导出对话框
     if (showExportDialog) {
-        AlertDialog(
-            onDismissRequest = { showExportDialog = false },
-            title = { Text("📤 导出样本数据", color = GlassColors.TextPrimary) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("请选择数据类型：", fontSize = 14.sp, color = GlassColors.TextSecondary)
-                    Button(
-                        onClick = {
-                            exportType = "normal"
-                            showExportDialog = false
-                            fileNameInput = "samples_${System.currentTimeMillis()}"
-                            val data = viewModel.exportSamples("normal")
-                            try {
-                                val file = File(context.filesDir, "$fileNameInput.csv")
-                                file.writeText(data)
-                                Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = GlassColors.SuccessGlass)
-                    ) { Text("导出普通样本", color = Color.White) }
-                    Button(
-                        onClick = {
-                            exportType = "drill"
-                            showExportDialog = false
-                            fileNameInput = "samples_${System.currentTimeMillis()}"
-                            val data = viewModel.exportSamples("drill")
-                            try {
-                                val file = File(context.filesDir, "$fileNameInput.csv")
-                                file.writeText(data)
-                                Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = GlassColors.PrimaryGlass)
-                    ) { Text("导出钻孔样本", color = Color.White) }
-                    Button(
-                        onClick = {
-                            exportType = "all"
-                            showExportDialog = false
-                            fileNameInput = "samples_${System.currentTimeMillis()}"
-                            val data = viewModel.exportSamples("all")
-                            try {
-                                val file = File(context.filesDir, "$fileNameInput.csv")
-                                file.writeText(data)
-                                Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = GlassColors.SecondaryGlass)
-                    ) { Text("全选导出", color = Color.White) }
+        ExportDialogSampleV3(
+            onDismiss = { showExportDialog = false },
+            onExportNormal = {
+                val data = viewModel.exportSamples("normal")
+                try {
+                    val file = File(context.filesDir, "samples_${System.currentTimeMillis()}.csv")
+                    file.writeText(data)
+                    Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
+                showExportDialog = false
             },
-            confirmButton = {
-                TextButton(onClick = { showExportDialog = false }) { Text("取消", color = GlassColors.TextSecondary) }
+            onExportDrill = {
+                val data = viewModel.exportSamples("drill")
+                try {
+                    val file = File(context.filesDir, "samples_${System.currentTimeMillis()}.csv")
+                    file.writeText(data)
+                    Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                showExportDialog = false
+            },
+            onExportAll = {
+                val data = viewModel.exportSamples("all")
+                try {
+                    val file = File(context.filesDir, "samples_${System.currentTimeMillis()}.csv")
+                    file.writeText(data)
+                    Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                showExportDialog = false
             }
         )
     }
 
     // 普通样本编辑对话框
     if (showNormalDialog && editingNormalSample != null) {
-        val sample = editingNormalSample!!
-        var sampleType by remember { mutableStateOf(sample.sampleType) }
-        var sampleNumber by remember { mutableStateOf(sample.sampleNumber) }
-        var name by remember { mutableStateOf(sample.name) }
-        var weight by remember { mutableStateOf(sample.weight) }
-        var description by remember { mutableStateOf(sample.description) }
-
-        AlertDialog(
-            onDismissRequest = {
+        NormalSampleDialogV3(
+            sample = editingNormalSample!!,
+            currentLocation = uiState.currentLocation,
+            onSave = { newSample ->
+                if (newSample.id == 0L) {
+                    viewModel.addNormalSample(newSample)
+                } else {
+                    viewModel.updateNormalSample(newSample)
+                }
                 showNormalDialog = false
                 editingNormalSample = null
             },
-            title = { Text(if (sample.id == 0L) "添加普通样本" else "编辑普通样本", color = GlassColors.TextPrimary) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(
-                        value = sampleType, onValueChange = { sampleType = it },
-                        label = { Text("样本类型") }, modifier = Modifier.fillMaxWidth(), singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = sampleNumber, onValueChange = { sampleNumber = it },
-                        label = { Text("编号") }, modifier = Modifier.fillMaxWidth(), singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = name, onValueChange = { name = it },
-                        label = { Text("名称") }, modifier = Modifier.fillMaxWidth(), singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = weight, onValueChange = { weight = it },
-                        label = { Text("重量 (kg)") }, modifier = Modifier.fillMaxWidth(), singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = description, onValueChange = { description = it },
-                        label = { Text("描述") }, modifier = Modifier.fillMaxWidth(), maxLines = 2
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val newSample = sample.copy(
-                        sampleType = sampleType,
-                        sampleNumber = sampleNumber,
-                        name = name,
-                        weight = weight,
-                        description = description,
-                        latitude = uiState.currentLocation?.latitude ?: sample.latitude,
-                        longitude = uiState.currentLocation?.longitude ?: sample.longitude,
-                        altitude = uiState.currentLocation?.altitude ?: sample.altitude,
-                        timestamp = if (sample.id == 0L) System.currentTimeMillis() else sample.timestamp
-                    )
-                    if (sample.id == 0L) {
-                        viewModel.addNormalSample(newSample)
-                    } else {
-                        viewModel.updateNormalSample(newSample)
-                    }
-                    showNormalDialog = false
-                    editingNormalSample = null
-                }) {
-                    Text("保存", color = GlassColors.SuccessGlass)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showNormalDialog = false
-                    editingNormalSample = null
-                }) { Text("取消", color = GlassColors.TextSecondary) }
+            onDismiss = {
+                showNormalDialog = false
+                editingNormalSample = null
             }
         )
     }
 
     // 钻孔样本编辑对话框
     if (showDrillDialog && editingDrillSample != null) {
-        val sample = editingDrillSample!!
-        var sampleNumber by remember { mutableStateOf(sample.sampleNumber) }
-        var depthFrom by remember { mutableStateOf(sample.depthFrom) }
-        var depthTo by remember { mutableStateOf(sample.depthTo) }
-        var sampleLength by remember { mutableStateOf(sample.sampleLength) }
-        var coreLength by remember { mutableStateOf(sample.coreLength) }
-        var recoveryRate by remember { mutableStateOf(sample.recoveryRate) }
-        var weight by remember { mutableStateOf(sample.weight) }
-        var name by remember { mutableStateOf(sample.name) }
-        var coreDiameter by remember { mutableStateOf(sample.coreDiameter) }
-        var description by remember { mutableStateOf(sample.description) }
-
-        AlertDialog(
-            onDismissRequest = {
+        DrillSampleDialogV3(
+            sample = editingDrillSample!!,
+            currentLocation = uiState.currentLocation,
+            onSave = { newSample ->
+                if (newSample.id == 0L) {
+                    viewModel.addDrillSample(newSample)
+                } else {
+                    viewModel.updateDrillSample(newSample)
+                }
                 showDrillDialog = false
                 editingDrillSample = null
             },
-            title = { Text(if (sample.id == 0L) "添加钻孔样本" else "编辑钻孔样本", color = GlassColors.TextPrimary) },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.heightIn(max = 350.dp)
-                ) {
-                    OutlinedTextField(
-                        value = sampleNumber, onValueChange = { sampleNumber = it },
-                        label = { Text("样本编号") }, modifier = Modifier.fillMaxWidth(), singleLine = true
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(
-                            value = depthFrom, onValueChange = { depthFrom = it },
-                            label = { Text("孔深自") }, modifier = Modifier.weight(1f), singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = depthTo, onValueChange = { depthTo = it },
-                            label = { Text("孔深至") }, modifier = Modifier.weight(1f), singleLine = true
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(
-                            value = sampleLength, onValueChange = { sampleLength = it },
-                            label = { Text("样长") }, modifier = Modifier.weight(1f), singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = coreLength, onValueChange = { coreLength = it },
-                            label = { Text("岩心长") }, modifier = Modifier.weight(1f), singleLine = true
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(
-                            value = recoveryRate, onValueChange = { recoveryRate = it },
-                            label = { Text("采取率") }, modifier = Modifier.weight(1f), singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = weight, onValueChange = { weight = it },
-                            label = { Text("重量") }, modifier = Modifier.weight(1f), singleLine = true
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(
-                            value = name, onValueChange = { name = it },
-                            label = { Text("名称") }, modifier = Modifier.weight(1f), singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = coreDiameter, onValueChange = { coreDiameter = it },
-                            label = { Text("岩心直径") }, modifier = Modifier.weight(1f), singleLine = true
-                        )
-                    }
-                    OutlinedTextField(
-                        value = description, onValueChange = { description = it },
-                        label = { Text("描述") }, modifier = Modifier.fillMaxWidth(), maxLines = 2
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val newSample = sample.copy(
-                        sampleNumber = sampleNumber,
-                        depthFrom = depthFrom,
-                        depthTo = depthTo,
-                        sampleLength = sampleLength,
-                        coreLength = coreLength,
-                        recoveryRate = recoveryRate,
-                        weight = weight,
-                        name = name,
-                        coreDiameter = coreDiameter,
-                        description = description,
-                        latitude = uiState.currentLocation?.latitude ?: sample.latitude,
-                        longitude = uiState.currentLocation?.longitude ?: sample.longitude,
-                        altitude = uiState.currentLocation?.altitude ?: sample.altitude,
-                        timestamp = if (sample.id == 0L) System.currentTimeMillis() else sample.timestamp
-                    )
-                    if (sample.id == 0L) {
-                        viewModel.addDrillSample(newSample)
-                    } else {
-                        viewModel.updateDrillSample(newSample)
-                    }
-                    showDrillDialog = false
-                    editingDrillSample = null
-                }) {
-                    Text("保存", color = GlassColors.PrimaryGlass)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showDrillDialog = false
-                    editingDrillSample = null
-                }) { Text("取消", color = GlassColors.TextSecondary) }
+            onDismiss = {
+                showDrillDialog = false
+                editingDrillSample = null
             }
         )
     }
@@ -540,4 +370,223 @@ fun SampleItemGlass(
             Icon(Icons.Default.Delete, contentDescription = "删除", tint = GlassColors.ErrorGlass, modifier = Modifier.size(14.dp))
         }
     }
+}
+
+@Composable
+fun ExportDialogSampleV3(
+    onDismiss: () -> Unit,
+    onExportNormal: () -> Unit,
+    onExportDrill: () -> Unit,
+    onExportAll: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("📤 导出样本数据", color = GlassColors.TextPrimary) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("请选择数据类型：", fontSize = 14.sp, color = GlassColors.TextSecondary)
+                Button(
+                    onClick = onExportNormal,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = GlassColors.SuccessGlass)
+                ) { Text("导出普通样本", color = Color.White) }
+                Button(
+                    onClick = onExportDrill,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = GlassColors.PrimaryGlass)
+                ) { Text("导出钻孔样本", color = Color.White) }
+                Button(
+                    onClick = onExportAll,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = GlassColors.SecondaryGlass)
+                ) { Text("全选导出", color = Color.White) }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("取消", color = GlassColors.TextSecondary) }
+        }
+    )
+}
+
+@Composable
+fun NormalSampleDialogV3(
+    sample: SampleEntity,
+    currentLocation: android.location.Location?,
+    onSave: (SampleEntity) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var sampleType by remember { mutableStateOf(sample.sampleType) }
+    var sampleNumber by remember { mutableStateOf(sample.sampleNumber) }
+    var name by remember { mutableStateOf(sample.name) }
+    var weight by remember { mutableStateOf(sample.weight) }
+    var description by remember { mutableStateOf(sample.description) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (sample.id == 0L) "添加普通样本" else "编辑普通样本", color = GlassColors.TextPrimary) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedTextField(
+                    value = sampleType, onValueChange = { sampleType = it },
+                    label = { Text("样本类型") }, modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = sampleNumber, onValueChange = { sampleNumber = it },
+                    label = { Text("编号") }, modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it },
+                    label = { Text("名称") }, modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = weight, onValueChange = { weight = it },
+                    label = { Text("重量 (kg)") }, modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = description, onValueChange = { description = it },
+                    label = { Text("描述") }, modifier = Modifier.fillMaxWidth(), maxLines = 2
+                )
+                if (currentLocation != null) {
+                    Text(
+                        text = "📍 ${String.format("%.6f, %.6f", currentLocation.longitude, currentLocation.latitude)}",
+                        fontSize = 11.sp,
+                        color = GlassColors.TextTertiary
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val newSample = sample.copy(
+                    sampleType = sampleType,
+                    sampleNumber = sampleNumber,
+                    name = name,
+                    weight = weight,
+                    description = description,
+                    latitude = currentLocation?.latitude ?: sample.latitude,
+                    longitude = currentLocation?.longitude ?: sample.longitude,
+                    altitude = currentLocation?.altitude ?: sample.altitude,
+                    timestamp = if (sample.id == 0L) System.currentTimeMillis() else sample.timestamp
+                )
+                onSave(newSample)
+            }) {
+                Text("保存", color = GlassColors.SuccessGlass)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消", color = GlassColors.TextSecondary) }
+        }
+    )
+}
+
+@Composable
+fun DrillSampleDialogV3(
+    sample: DrillSampleEntity,
+    currentLocation: android.location.Location?,
+    onSave: (DrillSampleEntity) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var sampleNumber by remember { mutableStateOf(sample.sampleNumber) }
+    var depthFrom by remember { mutableStateOf(sample.depthFrom) }
+    var depthTo by remember { mutableStateOf(sample.depthTo) }
+    var sampleLength by remember { mutableStateOf(sample.sampleLength) }
+    var coreLength by remember { mutableStateOf(sample.coreLength) }
+    var recoveryRate by remember { mutableStateOf(sample.recoveryRate) }
+    var weight by remember { mutableStateOf(sample.weight) }
+    var name by remember { mutableStateOf(sample.name) }
+    var coreDiameter by remember { mutableStateOf(sample.coreDiameter) }
+    var description by remember { mutableStateOf(sample.description) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (sample.id == 0L) "添加钻孔样本" else "编辑钻孔样本", color = GlassColors.TextPrimary) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.heightIn(max = 350.dp)
+            ) {
+                OutlinedTextField(
+                    value = sampleNumber, onValueChange = { sampleNumber = it },
+                    label = { Text("样本编号") }, modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedTextField(
+                        value = depthFrom, onValueChange = { depthFrom = it },
+                        label = { Text("孔深自") }, modifier = Modifier.weight(1f), singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = depthTo, onValueChange = { depthTo = it },
+                        label = { Text("孔深至") }, modifier = Modifier.weight(1f), singleLine = true
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedTextField(
+                        value = sampleLength, onValueChange = { sampleLength = it },
+                        label = { Text("样长") }, modifier = Modifier.weight(1f), singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = coreLength, onValueChange = { coreLength = it },
+                        label = { Text("岩心长") }, modifier = Modifier.weight(1f), singleLine = true
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedTextField(
+                        value = recoveryRate, onValueChange = { recoveryRate = it },
+                        label = { Text("采取率") }, modifier = Modifier.weight(1f), singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = weight, onValueChange = { weight = it },
+                        label = { Text("重量") }, modifier = Modifier.weight(1f), singleLine = true
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedTextField(
+                        value = name, onValueChange = { name = it },
+                        label = { Text("名称") }, modifier = Modifier.weight(1f), singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = coreDiameter, onValueChange = { coreDiameter = it },
+                        label = { Text("岩心直径") }, modifier = Modifier.weight(1f), singleLine = true
+                    )
+                }
+                OutlinedTextField(
+                    value = description, onValueChange = { description = it },
+                    label = { Text("描述") }, modifier = Modifier.fillMaxWidth(), maxLines = 2
+                )
+                if (currentLocation != null) {
+                    Text(
+                        text = "📍 ${String.format("%.6f, %.6f", currentLocation.longitude, currentLocation.latitude)}",
+                        fontSize = 11.sp,
+                        color = GlassColors.TextTertiary
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val newSample = sample.copy(
+                    sampleNumber = sampleNumber,
+                    depthFrom = depthFrom,
+                    depthTo = depthTo,
+                    sampleLength = sampleLength,
+                    coreLength = coreLength,
+                    recoveryRate = recoveryRate,
+                    weight = weight,
+                    name = name,
+                    coreDiameter = coreDiameter,
+                    description = description,
+                    latitude = currentLocation?.latitude ?: sample.latitude,
+                    longitude = currentLocation?.longitude ?: sample.longitude,
+                    altitude = currentLocation?.altitude ?: sample.altitude,
+                    timestamp = if (sample.id == 0L) System.currentTimeMillis() else sample.timestamp
+                )
+                onSave(newSample)
+            }) {
+                Text("保存", color = GlassColors.PrimaryGlass)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消", color = GlassColors.TextSecondary) }
+        }
+    )
 }

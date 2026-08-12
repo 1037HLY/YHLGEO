@@ -199,93 +199,52 @@ fun SampleScreenV2(
         }
     }
 
-    // 导出对话框
+    // 导出对话框 - 使用独立函数
     if (showExportDialog) {
-        AlertDialog(
-            onDismissRequest = { showExportDialog = false },
-            title = { Text("📤 导出样本数据") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("请选择数据类型：", fontSize = 14.sp, color = Color(0xFF475569))
-                    Button(
-                        onClick = { 
-                            exportType = "normal"
-                            showExportDialog = false
-                            fileNameInput = "samples_${System.currentTimeMillis()}"
-                            showFileNameDialog = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                    ) { Text("导出普通样本") }
-                    Button(
-                        onClick = { 
-                            exportType = "drill"
-                            showExportDialog = false
-                            fileNameInput = "samples_${System.currentTimeMillis()}"
-                            showFileNameDialog = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-                    ) { Text("导出钻孔样本") }
-                    Button(
-                        onClick = { 
-                            exportType = "all"
-                            showExportDialog = false
-                            fileNameInput = "samples_${System.currentTimeMillis()}"
-                            showFileNameDialog = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9))
-                    ) { Text("全选导出") }
-                }
+        ExportDialogSample(
+            onDismiss = { showExportDialog = false },
+            onExportNormal = {
+                exportType = "normal"
+                showExportDialog = false
+                fileNameInput = "samples_${System.currentTimeMillis()}"
+                showFileNameDialog = true
             },
-            confirmButton = {
-                TextButton(onClick = { showExportDialog = false }) { Text("取消") }
+            onExportDrill = {
+                exportType = "drill"
+                showExportDialog = false
+                fileNameInput = "samples_${System.currentTimeMillis()}"
+                showFileNameDialog = true
+            },
+            onExportAll = {
+                exportType = "all"
+                showExportDialog = false
+                fileNameInput = "samples_${System.currentTimeMillis()}"
+                showFileNameDialog = true
             }
         )
     }
 
     // 自定义文件名对话框
     if (showFileNameDialog) {
-        AlertDialog(
-            onDismissRequest = { showFileNameDialog = false },
-            title = { Text("📝 自定义文件名") },
-            text = {
-                Column {
-                    Text("请输入文件名：", fontSize = 14.sp, color = Color(0xFF475569))
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = fileNameInput,
-                        onValueChange = { fileNameInput = it },
-                        label = { Text("文件名") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        trailingIcon = { Text(".csv", fontSize = 14.sp, color = Color(0xFF94A3B8)) }
-                    )
+        FileNameDialogSample(
+            fileName = fileNameInput,
+            onFileNameChange = { fileNameInput = it },
+            onConfirm = {
+                val data = viewModel.exportSamples(exportType)
+                try {
+                    val file = File(context.filesDir, "$fileNameInput.csv")
+                    file.writeText(data)
+                    Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
+                showFileNameDialog = false
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val data = viewModel.exportSamples(exportType)
-                        try {
-                            val file = File(context.filesDir, "$fileNameInput.csv")
-                            file.writeText(data)
-                            Toast.makeText(context, "导出成功: ${file.name}", Toast.LENGTH_LONG).show()
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                        showFileNameDialog = false
-                    }
-                ) { Text("导出") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showFileNameDialog = false }) { Text("取消") }
-            }
+            onDismiss = { showFileNameDialog = false }
         )
     }
 
-    // 普通样本编辑对话框
+    // 普通样本编辑对话框 - 使用独立函数
     if (uiState.showNormalDialog) {
         NormalSampleDialogV2(
             sample = uiState.editingNormalSample ?: SampleEntity(),
@@ -302,7 +261,7 @@ fun SampleScreenV2(
         )
     }
 
-    // 钻孔样本编辑对话框
+    // 钻孔样本编辑对话框 - 使用独立函数
     if (uiState.showDrillDialog) {
         DrillSampleDialogV2(
             sample = uiState.editingDrillSample ?: DrillSampleEntity(),
@@ -345,6 +304,75 @@ fun SampleItemSmall(
             Icon(Icons.Default.Delete, contentDescription = "删除", tint = Color(0xFFEF4444), modifier = Modifier.size(14.dp))
         }
     }
+}
+
+@Composable
+fun ExportDialogSample(
+    onDismiss: () -> Unit,
+    onExportNormal: () -> Unit,
+    onExportDrill: () -> Unit,
+    onExportAll: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("📤 导出样本数据") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("请选择数据类型：", fontSize = 14.sp, color = Color(0xFF475569))
+                Button(
+                    onClick = onExportNormal,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                ) { Text("导出普通样本") }
+                Button(
+                    onClick = onExportDrill,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                ) { Text("导出钻孔样本") }
+                Button(
+                    onClick = onExportAll,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9))
+                ) { Text("全选导出") }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
+}
+
+@Composable
+fun FileNameDialogSample(
+    fileName: String,
+    onFileNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("📝 自定义文件名") },
+        text = {
+            Column {
+                Text("请输入文件名：", fontSize = 14.sp, color = Color(0xFF475569))
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = fileName,
+                    onValueChange = onFileNameChange,
+                    label = { Text("文件名") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    trailingIcon = { Text(".csv", fontSize = 14.sp, color = Color(0xFF94A3B8)) }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("导出") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

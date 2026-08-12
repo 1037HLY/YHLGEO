@@ -106,124 +106,148 @@ fun SensorScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        SensorCurveCard(
-            title = "加速度计",
-            data = accelerometerData,
-            color = Color(0xFF0EA5E9),
-            unit = "m/s²"
-        )
+        // 加速度计
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFFFFFFF).copy(alpha = 0.85f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("加速度计", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
+                    if (accelerometerData.isNotEmpty()) {
+                        Text("${"%.2f".format(accelerometerData.last())} m/s²", fontSize = 14.sp, color = Color(0xFF475569))
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                SensorCurve(data = accelerometerData, color = Color(0xFF0EA5E9))
+            }
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        SensorCurveCard(
-            title = "陀螺仪",
-            data = gyroscopeData,
-            color = Color(0xFF8B5CF6),
-            unit = "rad/s"
-        )
+        // 陀螺仪
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFFFFFFF).copy(alpha = 0.85f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("陀螺仪", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
+                    if (gyroscopeData.isNotEmpty()) {
+                        Text("${"%.2f".format(gyroscopeData.last())} rad/s", fontSize = 14.sp, color = Color(0xFF475569))
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                SensorCurve(data = gyroscopeData, color = Color(0xFF8B5CF6))
+            }
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        SensorCurveCard(
-            title = "磁力计",
-            data = magnetometerData,
-            color = Color(0xFF10B981),
-            unit = "μT"
-        )
+        // 磁力计
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFFFFFFF).copy(alpha = 0.85f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("磁力计", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
+                    if (magnetometerData.isNotEmpty()) {
+                        Text("${"%.2f".format(magnetometerData.last())} μT", fontSize = 14.sp, color = Color(0xFF475569))
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                SensorCurve(data = magnetometerData, color = Color(0xFF10B981))
+            }
+        }
     }
 }
 
 @Composable
-fun SensorCurveCard(
-    title: String,
-    data: List<Float>,
-    color: Color,
-    unit: String
-) {
-    Card(
+fun SensorCurve(data: List<Float>, color: Color) {
+    Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(150.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFFFFF).copy(alpha = 0.85f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .weight(1f)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF0F172A)
-                )
-                if (data.isNotEmpty()) {
-                    Text(
-                        text = "${"%.2f".format(data.last())} $unit",
-                        fontSize = 14.sp,
-                        color = Color(0xFF475569)
-                    )
+        val width = size.width
+        val height = size.height
+        val padding = 8f
+
+        if (data.size > 1) {
+            val maxValue = data.maxOrNull()?.let { if (it == 0f) 1f else it * 1.2f } ?: 1f
+            val minValue = data.minOrNull() ?: 0f
+            val range = if (maxValue - minValue > 0) maxValue - minValue else 1f
+
+            val path = Path()
+            val step = (width - padding * 2) / (data.size - 1)
+
+            for (i in data.indices) {
+                val x = padding + i * step
+                val normalizedValue = (data[i] - minValue) / range
+                val y = height - padding - normalizedValue * (height - padding * 2)
+                if (i == 0) {
+                    path.moveTo(x, y)
+                } else {
+                    path.lineTo(x, y)
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                val width = size.width
-                val height = size.height
-                val padding = 8f
-
-                if (data.size > 1) {
-                    val maxValue = data.maxOrNull()?.let { if (it == 0f) 1f else it * 1.2f } ?: 1f
-                    val minValue = data.minOrNull() ?: 0f
-                    val range = if (maxValue - minValue > 0) maxValue - minValue else 1f
-
-                    val path = Path()
-                    val step = (width - padding * 2) / (data.size - 1)
-
-                    for (i in data.indices) {
-                        val x = padding + i * step
-                        val normalizedValue = (data[i] - minValue) / range
-                        val y = height - padding - normalizedValue * (height - padding * 2)
-                        if (i == 0) {
-                            path.moveTo(x, y)
-                        } else {
-                            path.lineTo(x, y)
-                        }
-                    }
-
-                    drawPath(
-                        path = path,
-                        color = color,
-                        style = Stroke(width = 3f)
-                    )
-                } else {
-                    drawIntoCanvas { canvas ->
-                        val paint = android.graphics.Paint().apply {
-                            color = android.graphics.Color.parseColor("#94A3B8")
-                            textSize = 28f
-                            isAntiAlias = true
-                            textAlign = android.graphics.Paint.Align.CENTER
-                        }
-                        canvas.nativeCanvas.drawText(
-                            "等待数据...",
-                            width / 2,
-                            height / 2 + 10,
-                            paint
-                        )
-                    }
+            drawPath(
+                path = path,
+                color = color,
+                style = Stroke(width = 3f)
+            )
+        } else {
+            drawIntoCanvas { canvas ->
+                val paint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.parseColor("#94A3B8")
+                    textSize = 28f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
                 }
+                canvas.nativeCanvas.drawText(
+                    "等待数据...",
+                    width / 2,
+                    height / 2 + 10,
+                    paint
+                )
             }
         }
     }

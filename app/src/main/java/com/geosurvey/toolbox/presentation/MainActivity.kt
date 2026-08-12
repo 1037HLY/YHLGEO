@@ -36,7 +36,7 @@ import com.geosurvey.toolbox.presentation.ui.screens.AttitudeScreen
 import com.geosurvey.toolbox.presentation.ui.screens.CameraPageScreen
 import com.geosurvey.toolbox.presentation.ui.screens.MainScreenWithNav
 import com.geosurvey.toolbox.presentation.ui.screens.MapScreen
-import com.geosurvey.toolbox.presentation.ui.screens.SampleScreenV3
+import com.geosurvey.toolbox.presentation.ui.screens.SampleScreen
 import com.geosurvey.toolbox.presentation.ui.screens.SensorScreen
 import com.geosurvey.toolbox.presentation.ui.screens.TrackListScreen
 import com.geosurvey.toolbox.presentation.viewmodel.AnalysisViewModel
@@ -169,7 +169,7 @@ class MainActivity : ComponentActivity() {
                         LaunchedEffect(location) {
                             location?.let { sampleViewModel.updateLocation(it) }
                         }
-                        SampleScreenV3(
+                        SampleScreen(
                             viewModel = sampleViewModel,
                             onBack = { showSample = false }
                         )

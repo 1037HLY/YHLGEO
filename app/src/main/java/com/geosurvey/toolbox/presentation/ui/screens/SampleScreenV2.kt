@@ -36,6 +36,12 @@ fun SampleScreenV2(
     var showFileNameDialog by remember { mutableStateOf(false) }
     var fileNameInput by remember { mutableStateOf("samples_${System.currentTimeMillis()}") }
     var exportType by remember { mutableStateOf("all") }
+    var showNormalDialog by remember { mutableStateOf(false) }
+    var showDrillDialog by remember { mutableStateOf(false) }
+    
+    // 编辑的样本数据
+    var editingNormalSample by remember { mutableStateOf<SampleEntity?>(null) }
+    var editingDrillSample by remember { mutableStateOf<DrillSampleEntity?>(null) }
 
     Column(
         modifier = Modifier
@@ -97,7 +103,10 @@ fun SampleScreenV2(
                         color = Color(0xFF059669)
                     )
                     IconButton(
-                        onClick = { viewModel.startEditNormal(SampleEntity()) },
+                        onClick = { 
+                            editingNormalSample = SampleEntity()
+                            showNormalDialog = true
+                        },
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "添加", tint = Color(0xFF059669), modifier = Modifier.size(18.dp))
@@ -120,7 +129,10 @@ fun SampleScreenV2(
                             SampleItemSmall(
                                 title = "${sample.sampleNumber} ${sample.name}",
                                 subtitle = "类型: ${sample.sampleType} | ${sample.weight}kg",
-                                onLongClick = { viewModel.startEditNormal(sample) },
+                                onLongClick = { 
+                                    editingNormalSample = sample
+                                    showNormalDialog = true
+                                },
                                 onDelete = { viewModel.deleteNormalSample(sample.id) }
                             )
                         }
@@ -166,7 +178,10 @@ fun SampleScreenV2(
                         color = Color(0xFF2563EB)
                     )
                     IconButton(
-                        onClick = { viewModel.startEditDrill(DrillSampleEntity()) },
+                        onClick = { 
+                            editingDrillSample = DrillSampleEntity()
+                            showDrillDialog = true
+                        },
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "添加", tint = Color(0xFF2563EB), modifier = Modifier.size(18.dp))
@@ -189,7 +204,10 @@ fun SampleScreenV2(
                             SampleItemSmall(
                                 title = "${sample.sampleNumber} ${sample.name}",
                                 subtitle = "孔深: ${sample.depthFrom}-${sample.depthTo}m | 样长: ${sample.sampleLength}m",
-                                onLongClick = { viewModel.startEditDrill(sample) },
+                                onLongClick = { 
+                                    editingDrillSample = sample
+                                    showDrillDialog = true
+                                },
                                 onDelete = { viewModel.deleteDrillSample(sample.id) }
                             )
                         }
@@ -199,7 +217,7 @@ fun SampleScreenV2(
         }
     }
 
-    // 导出对话框 - 在Column外部但仍在Composable上下文中
+    // 导出对话框
     if (showExportDialog) {
         AlertDialog(
             onDismissRequest = { showExportDialog = false },
@@ -286,8 +304,8 @@ fun SampleScreenV2(
     }
 
     // 普通样本编辑对话框
-    if (uiState.showNormalDialog) {
-        val sample = uiState.editingNormalSample ?: SampleEntity()
+    if (showNormalDialog && editingNormalSample != null) {
+        val sample = editingNormalSample!!
         var sampleType by remember { mutableStateOf(sample.sampleType) }
         var sampleNumber by remember { mutableStateOf(sample.sampleNumber) }
         var name by remember { mutableStateOf(sample.name) }
@@ -295,7 +313,10 @@ fun SampleScreenV2(
         var description by remember { mutableStateOf(sample.description) }
 
         AlertDialog(
-            onDismissRequest = { viewModel.closeDialogs() },
+            onDismissRequest = { 
+                showNormalDialog = false
+                editingNormalSample = null
+            },
             title = { Text(if (sample.id == 0L) "添加普通样本" else "编辑普通样本") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -345,20 +366,24 @@ fun SampleScreenV2(
                     } else {
                         viewModel.updateNormalSample(newSample)
                     }
-                    viewModel.closeDialogs()
+                    showNormalDialog = false
+                    editingNormalSample = null
                 }) {
                     Text("保存")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.closeDialogs() }) { Text("取消") }
+                TextButton(onClick = { 
+                    showNormalDialog = false
+                    editingNormalSample = null
+                }) { Text("取消") }
             }
         )
     }
 
     // 钻孔样本编辑对话框
-    if (uiState.showDrillDialog) {
-        val sample = uiState.editingDrillSample ?: DrillSampleEntity()
+    if (showDrillDialog && editingDrillSample != null) {
+        val sample = editingDrillSample!!
         var sampleNumber by remember { mutableStateOf(sample.sampleNumber) }
         var depthFrom by remember { mutableStateOf(sample.depthFrom) }
         var depthTo by remember { mutableStateOf(sample.depthTo) }
@@ -371,7 +396,10 @@ fun SampleScreenV2(
         var description by remember { mutableStateOf(sample.description) }
 
         AlertDialog(
-            onDismissRequest = { viewModel.closeDialogs() },
+            onDismissRequest = { 
+                showDrillDialog = false
+                editingDrillSample = null
+            },
             title = { Text(if (sample.id == 0L) "添加钻孔样本" else "编辑钻孔样本") },
             text = {
                 Column(
@@ -457,13 +485,17 @@ fun SampleScreenV2(
                     } else {
                         viewModel.updateDrillSample(newSample)
                     }
-                    viewModel.closeDialogs()
+                    showDrillDialog = false
+                    editingDrillSample = null
                 }) {
                     Text("保存")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.closeDialogs() }) { Text("取消") }
+                TextButton(onClick = { 
+                    showDrillDialog = false
+                    editingDrillSample = null
+                }) { Text("取消") }
             }
         )
     }
